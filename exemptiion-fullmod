@@ -1,0 +1,162 @@
+// 123FormBuilder: Hide/disable "Full Fee Modules" that appear in "Exempted Modules"
+// Matches by visible label text such as "Corporate Law 6.1 (CLaw)" etc.
+
+(function () {
+  // Text your candidates see for each module (must match your labels/options):
+  const MODULE_TEXT = [
+    'Corporate Law 6.1 (CLaw)',
+    'Corporate Compliance Administration 6.2 (CCA)',
+    'Corporate Governance 6.3 (CG)',
+    'Interpreting Financial Accounting Information 6.4 (IFAI)',
+    'Board Dynamics 7.1 (BDY)',
+    'Development of Strategy 7.2 (DOS)',
+    'Risk Management 7.3 (RM)'
+  ];
+
+  // Section titles exactly as they appear on your form:
+  const EXEMPTED_HEADING = 'Exempted Modules';
+  const FULLFEE_HEADING  = 'Full Fee Modules';
+
+  // ---------- helpers ----------
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  function normalize(s){ return (s||'').trim().replace(/\s+/g,' ').toLowerCase(); }
+
+  // Try to find a section/block by its heading text (legend/h2/h3/label-like title)
+  function findSectionByHeading(text){
+    const needle = normalize(text);
+    // common heading tags/containers used by form builders
+    const candidates = $$('h1,h2,h3,h4,legend,.section-title,.title,.header,.formSectionTitle, .field > .label, .form-section, .section');
+    // expand search a bit: walk the DOM, pick any element with text containing the heading
+    const withText = candidates.concat($$('div,section,fieldset'))
+      .filter(el => normalize(el.textContent).includes(needle));
+
+    // Prefer a container element that actually contains inputs
+    for (const el of withText) {
+      const container = el.closest('fieldset, section, .section, .form-section, .group') || el;
+      if ($$('input,select', container).length) return container;
+    }
+    return null;
+  }
+
+  // From a section, build a map: normalized label text -> { input, labelEl }
+  function indexChoices(section){
+    const map = new Map();
+    if (!section) return map;
+
+    // Handle input + label patterns
+    const inputs = $$('input[type="checkbox"], input[type="radio"]', section);
+    inputs.forEach(inp => {
+      const label = (inp.id && section.querySelector(`label[for="${inp.id}"]`)) || inp.closest('label') || inp.closest('.field,.q,.row');
+      const text  = label ? normalize(label.textContent) : normalize(inp.value);
+      if (text) map.set(text, { input: inp, labelEl: label || inp });
+    });
+
+    // Handle <select> options
+    const selects = $$('select', section);
+    selects.forEach(sel => {
+      Array.from(sel.options).forEach(opt => {
+        const text = normalize(opt.text || opt.value);
+        if (!text) return;
+        map.set(text, { select: sel, option: opt });
+      });
+    });
+
+    return map;
+  }
+
+  // Find which modules are checked in the “Exempted Modules” section
+  function getExemptedLabels(exemptSection){
+    const labels = new Set();
+    if (!exemptSection) return labels;
+
+    // checkboxes/radios
+    $$('input[type="checkbox"], input[type="radio"]', exemptSection).forEach(inp => {
+      if (!inp.checked) return;
+      const lab = (inp.id && exemptSection.querySelector(`label[for="${inp.id}"]`)) || inp.closest('label') || inp.closest('.field,.q,.row');
+      const text = lab ? normalize(lab.textContent) : normalize(inp.value);
+      if (text) labels.add(text);
+    });
+
+    // if you ever use a select in Exempted section
+    $$('select', exemptSection).forEach(sel => {
+      const opt = sel.selectedOptions && sel.selectedOptions[0];
+      if (!opt) return;
+      const text = normalize(opt.text || opt.value);
+      if (text) labels.add(text);
+    });
+
+    return labels;
+  }
+
+  function applyFilter(){
+    const exemptSec = findSectionByHeading(EXEMPTED_HEADING);
+    const fullSec   = findSectionByHeading(FULLFEE_HEADING);
+
+    if (!fullSec) return;
+
+    // index both sides
+    const fullIdx   = indexChoices(fullSec);
+    const exemptSet = getExemptedLabels(exemptSec);
+
+    // Only consider known module texts (to avoid accidental matches)
+    const allowed = new Set(MODULE_TEXT.map(t => normalize(t)));
+
+    // reset: show/enable everything first
+    fullIdx.forEach((obj, key) => {
+      if (obj.input) {
+        obj.input.disabled = false;
+        if (obj.labelEl) obj.labelEl.style.display = '';
+      } else if (obj.option) {
+        obj.option.disabled = false;
+        obj.option.hidden = false;
+      }
+    });
+
+    // hide/disable matches
+    exemptSet.forEach(txt => {
+      if (!allowed.has(txt)) return; // ignore any non-module rows
+      const target = fullIdx.get(txt);
+      if (!target) return;
+
+      if (target.input) {
+        // uncheck if currently selected
+        if (target.input.checked) {
+          target.input.checked = false;
+          target.input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        target.input.disabled = true;
+        if (target.labelEl) target.labelEl.style.display = 'none';
+      } else if (target.option && target.select) {
+        // clear selection if currently chosen
+        if (target.select.value === target.option.value) {
+          target.select.value = '';
+          target.select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        target.option.disabled = true;
+        target.option.hidden = true;
+      }
+    });
+  }
+
+  function bindSectionListeners(){
+    const exemptSec = findSectionByHeading(EXEMPTED_HEADING);
+    if (!exemptSec) return;
+
+    // react to user changing exemptions
+    $$('input[type="checkbox"], input[type="radio"]', exemptSec).forEach(inp => {
+      inp.addEventListener('change', applyFilter);
+      inp.addEventListener('input',  applyFilter);
+    });
+    $$('select', exemptSec).forEach(sel => sel.addEventListener('change', applyFilter));
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    bindSectionListeners();
+    // also re-apply when someone interacts with Full Fee section (safe)
+    const fullSec = findSectionByHeading(FULLFEE_HEADING);
+    $$('input,select', fullSec || document).forEach(el => el.addEventListener('change', applyFilter));
+
+    // first pass
+    applyFilter();
+  });
+})();
