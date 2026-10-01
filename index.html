@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Operations Hub Demo</title>
+<style>
+:root{--bg:#f5f7fb;--panel:#fff;--text:#182235;--muted:#6d778a;--line:#e4e9f0;--brand:#184f7d;--brand2:#2f6f9f;--green:#11745b;--amber:#a86413;--red:#aa3945;--shadow:0 8px 24px rgba(24,34,53,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}button,input,select{font:inherit}button{cursor:pointer}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.side{background:#102b41;color:white;padding:18px 14px;position:sticky;top:0;height:100vh}.brand{font-weight:800;font-size:18px;padding:8px 10px 18px}.brand small{display:block;font-size:11px;font-weight:500;color:#a9bfd0;margin-top:4px}.demo{background:#173a55;border:1px solid #2c5776;padding:10px;border-radius:10px;font-size:11px;line-height:1.4;margin:4px 6px 18px}.nav button{display:block;width:100%;border:0;background:transparent;color:#dce8f1;text-align:left;padding:10px 11px;border-radius:9px;margin:2px 0}.nav button:hover,.nav button.active{background:#234d69;color:#fff}
+.main{min-width:0}.top{height:64px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:12px;position:sticky;top:0;z-index:5}.top input{flex:1;max-width:520px;border:1px solid var(--line);background:#fafcff;padding:10px 12px;border-radius:9px}.top .tag{margin-left:auto;font-size:11px;background:#eaf2f8;color:var(--brand);padding:6px 9px;border-radius:999px}.menu{display:none;border:1px solid var(--line);background:white;border-radius:8px;padding:8px 10px}
+.content{padding:24px;max-width:1400px;margin:auto}.page{display:none}.page.active{display:block}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.head h1{margin:0;font-size:25px}.head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.btn{border:0;border-radius:8px;padding:9px 12px;font-weight:700}.btn.primary{background:var(--brand);color:white}.btn.alt{background:white;border:1px solid var(--line);color:var(--text)}.btn.small{padding:6px 9px;font-size:11px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}.card{background:white;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.kpi{padding:16px}.kpi span{font-size:11px;color:var(--muted)}.kpi b{display:block;font-size:28px;margin-top:5px}
+.grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.panel{padding:16px}.panel h3{margin:0 0 12px;font-size:15px}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:white}.tbl{width:100%;border-collapse:collapse;min-width:760px}.tbl th,.tbl td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:12px;vertical-align:middle}.tbl th{background:#f8fafc;color:#727d90;font-size:10px;text-transform:uppercase}.tbl tr:last-child td{border-bottom:0}.link{border:0;background:none;color:var(--brand);font-weight:800;padding:0}.badge{display:inline-block;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:800}.g{background:#e5f5ef;color:#0e6b53}.a{background:#fff1dc;color:#92560d}.r{background:#fde9ec;color:#9d303b}.b{background:#e8f1fa;color:#245e8b}.x{background:#eef1f4;color:#626c7c}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters input,.filters select{border:1px solid var(--line);background:white;padding:8px 10px;border-radius:8px}.progress{width:100px;height:7px;background:#edf1f5;border-radius:999px;overflow:hidden}.progress i{display:block;height:100%;background:var(--green)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.step{background:white;border:1px solid var(--line);border-radius:12px;padding:14px}.step b{display:block;margin-bottom:5px;font-size:13px}.step span{font-size:11px;color:var(--muted)}
+.drawerbg{display:none;position:fixed;inset:0;background:rgba(12,20,30,.38);z-index:20}.drawerbg.open{display:block}.drawer{position:absolute;right:0;top:0;bottom:0;width:min(520px,94vw);background:white;padding:22px;overflow:auto}.drawer h2{margin-top:0}.kv{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid #f0f2f5}.kv span{color:var(--muted)}.close{float:right;border:0;background:#eef2f5;border-radius:8px;padding:7px 9px}.notice{background:#fff7e9;border:1px solid #f1d3a3;color:#7a511a;padding:11px 12px;border-radius:10px;font-size:12px;margin-bottom:12px}.report{white-space:pre-wrap;background:#111827;color:#dbe7f1;padding:14px;border-radius:10px;min-height:120px;font-size:12px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.app{grid-template-columns:1fr}.side{position:fixed;left:-255px;width:240px;z-index:15;transition:.2s}.side.open{left:0}.menu{display:block}.content{padding:16px}.top{padding:0 12px}.tag{display:none!important}.head{align-items:stretch}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side" id="side">
+<div class="brand">Operations Hub<small>CGQP workflow prototype</small></div>
+<div class="demo"><b>DEMO — FAKE DATA ONLY</b><br>Changes stay only in this browser and can be reset anytime.</div>
+<nav class="nav">
+<button class="active" data-page="dashboard">Dashboard</button>
+<button data-page="workflow">Workflow</button>
+<button data-page="students">Students / CRM</button>
+<button data-page="exams">Exams & Results</button>
+<button data-page="completion">STAX & Completion</button>
+<button data-page="cases">Cases</button>
+<button data-page="tasks">Tasks</button>
+<button data-page="teachout">Teach-out</button>
+<button data-page="reports">Reports</button>
+</nav>
+</aside>
+<main class="main">
+<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search fake student by name or ID"><span class="tag">DEMO MODE</span></header>
+<div class="content">
+<section class="page active" id="dashboard">
+<div class="head"><div><h1>Operations Dashboard</h1><p>Live view of the fake operational records.</p></div><button class="btn alt" onclick="resetDemo()">Reset demo data</button></div>
+<div class="kpis" id="kpis"></div>
+<div class="grid2">
+<div class="card panel"><h3>Students requiring attention</h3><div id="attention"></div></div>
+<div class="card panel"><h3>Activity</h3><div id="activity"></div></div>
+</div>
+</section>
+
+<section class="page" id="workflow">
+<div class="head"><div><h1>Workflow</h1><p>Demo student journey from enquiry to completion.</p></div></div>
+<div class="flow" id="flow"></div>
+</section>
+
+<section class="page" id="students">
+<div class="head"><div><h1>Students / CRM</h1><p>Open a fake student to see linked operational records.</p></div><button class="btn primary" onclick="addProspect()">+ Add demo prospect</button></div>
+<div class="filters"><input id="studentSearch" placeholder="Search student"><select id="studentStatus"><option value="">All statuses</option><option>Active</option><option>Inactive</option><option>Completed</option><option>Prospect</option></select></div>
+<div id="studentsTable"></div>
+</section>
+
+<section class="page" id="exams">
+<div class="head"><div><h1>Exams & Results</h1><p>Use the action button repeatedly to test payment, Examena and result progression.</p></div></div>
+<div class="notice">Test example: a Pending payment becomes Paid, then Examena becomes Ready, then a Pending result becomes Pass.</div>
+<div id="examsTable"></div>
+</section>
+
+<section class="page" id="completion">
+<div class="head"><div><h1>STAX & Completion</h1><p>Programme completion requires both modules and STAX.</p></div></div>
+<div id="completionTable"></div>
+</section>
+
+<section class="page" id="cases">
+<div class="head"><div><h1>Cases</h1><p>Advance cases through the workflow to test follow-up handling.</p></div><button class="btn primary" onclick="addCase()">+ Open demo case</button></div>
+<div id="casesTable"></div>
+</section>
+
+<section class="page" id="tasks">
+<div class="head"><div><h1>Tasks</h1><p>Complete or reopen follow-up actions.</p></div></div>
+<div id="tasksTable"></div>
+</section>
+
+<section class="page" id="teachout">
+<div class="head"><div><h1>Teach-out</h1><p>Planning view for remaining modules, risk and completion runway.</p></div></div>
+<div class="kpis" id="teachKpis"></div>
+<div id="teachTable"></div>
+</section>
+
+<section class="page" id="reports">
+<div class="head"><div><h1>Reports</h1><p>Generate simple management views from the current fake state.</p></div></div>
+<div class="filters"><button class="btn alt" onclick="report('remaining')">Remaining modules</button><button class="btn alt" onclick="report('fast')">Fast-track</button><button class="btn alt" onclick="report('risk')">Risk review</button><button class="btn alt" onclick="report('completion')">Completion candidates</button></div>
+<div class="report" id="reportBox">Choose a report above.</div>
+</section>
+</div>
+</main>
+</div>
+<div class="drawerbg" id="drawerbg"><div class="drawer" id="drawer"></div></div>
+<script>
+const seed={
+students:[
+{id:'DEMO-001',name:'Alice Demo',email:'alice.demo@example.test',status:'Active',track:'Fast-track',remaining:3,exemptions:5,stax:'Not Started',risk:'Normal',shelf:'Valid',intake:'Nov 2025'},
+{id:'DEMO-002',name:'Ben Demo',email:'ben.demo@example.test',status:'Active',track:'Full',remaining:1,exemptions:0,stax:'Completed',risk:'Normal',shelf:'Valid',intake:'Jun 2024'},
+{id:'DEMO-003',name:'Chloe Demo',email:'chloe.demo@example.test',status:'Active',track:'Full',remaining:4,exemptions:0,stax:'Not Started',risk:'High',shelf:'Valid',intake:'Nov 2024'},
+{id:'DEMO-004',name:'Darren Demo',email:'darren.demo@example.test',status:'Active',track:'Full',remaining:0,exemptions:0,stax:'Not Started',risk:'Medium',shelf:'Valid',intake:'Jun 2023'},
+{id:'DEMO-005',name:'Eva Demo',email:'eva.demo@example.test',status:'Inactive',track:'Full',remaining:5,exemptions:0,stax:'Not Started',risk:'High',shelf:'Expired',intake:'Nov 2022'},
+{id:'DEMO-006',name:'Farah Demo',email:'farah.demo@example.test',status:'Completed',track:'Full',remaining:0,exemptions:0,stax:'Completed',risk:'Normal',shelf:'Completed',intake:'Jun 2022'}],
+exams:[
+{id:'EX-001',student:'DEMO-001',module:'CLAW',diet:'Nov 2026',registration:'Full',payment:'Paid',examena:'Ready',result:'Pending'},
+{id:'EX-002',student:'DEMO-002',module:'RM',diet:'Nov 2026',registration:'Resit',payment:'Paid',examena:'Ready',result:'Pending'},
+{id:'EX-003',student:'DEMO-003',module:'CG',diet:'Nov 2026',registration:'Full',payment:'Pending',examena:'Not Ready',result:'Pending'},
+{id:'EX-004',student:'DEMO-003',module:'CCA',diet:'Nov 2026',registration:'Deferment',payment:'Waived',examena:'Not Required',result:'Deferred'}],
+cases:[
+{id:'CASE-001',student:'DEMO-003',type:'Examena readiness',priority:'High',status:'In Progress',owner:'Exam Team'},
+{id:'CASE-002',student:'DEMO-004',type:'STAX completion',priority:'Medium',status:'Waiting for Student',owner:'Students Team'},
+{id:'CASE-003',student:'DEMO-005',type:'Shelf-life review',priority:'High',status:'New',owner:'Students Team'}],
+tasks:[
+{id:'TASK-001',student:'DEMO-003',task:'Confirm Examena trial test',status:'Open',priority:'High'},
+{id:'TASK-002',student:'DEMO-004',task:'Follow up STAX registration',status:'Open',priority:'Medium'},
+{id:'TASK-003',student:'DEMO-005',task:'Review inactive student',status:'Overdue',priority:'High'}],
+activity:[['Exam','Demo-P003 payment requires action'],['Case','STAX follow-up opened for Demo-P004'],['Task','Inactive student review is overdue']]
+};
+const clone=()=>JSON.parse(JSON.stringify(seed));let data;try{data=JSON.parse(localStorage.getItem('operationsHubDemo'))||clone()}catch(e){data=clone()}
+const save=()=>localStorage.setItem('operationsHubDemo',JSON.stringify(data));
+const student=id=>data.students.find(x=>x.id===id);const nameOf=id=>student(id)?.name||id;
+function badge(v){let c=/Completed|Paid|Ready|Pass|Done|Valid|Normal/.test(v)?'g':/Pending|Medium|Waiting|Open|Not Started/.test(v)?'a':/High|Expired|Overdue|Not Ready|Fail/.test(v)?'r':/Active|Full|Resit|Fast/.test(v)?'b':'x';return '<span class="badge '+c+'">'+v+'</span>'}
+function table(h,rows){return '<div class="tablewrap"><table class="tbl"><thead><tr>'+h.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td colspan="'+h.length+'">No matching fake records.</td></tr>')+'</tbody></table></div>'}
+function go(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));document.getElementById('side').classList.remove('open')}
+document.querySelectorAll('.nav button').forEach(x=>x.onclick=()=>go(x.dataset.page));document.getElementById('menu').onclick=()=>document.getElementById('side').classList.toggle('open');
+function renderDashboard(){let openCases=data.cases.filter(x=>!['Resolved','Closed'].includes(x.status)).length,openTasks=data.tasks.filter(x=>x.status!=='Done').length,pending=data.exams.filter(x=>x.payment==='Pending').length,completed=data.students.filter(x=>x.status==='Completed').length;
+document.getElementById('kpis').innerHTML=[['People',data.students.length],['Open cases',openCases],['Open tasks',openTasks],['Pending payments',pending],['Completed',completed]].map(x=>'<div class="card kpi"><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+let att=data.students.filter(s=>s.risk==='High'||s.shelf==='Expired'||data.exams.some(e=>e.student===s.id&&(e.payment==='Pending'||e.examena==='Not Ready'))||data.tasks.some(t=>t.student===s.id&&t.status==='Overdue'));
+document.getElementById('attention').innerHTML=table(['Student','Risk','Issue'],att.map(s=>'<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+s.name+'</button><br><small>'+s.id+'</small></td><td>'+badge(s.risk)+'</td><td>'+(s.shelf==='Expired'?'Shelf life expired':data.exams.some(e=>e.student===s.id&&e.payment==='Pending')?'Payment pending':data.exams.some(e=>e.student===s.id&&e.examena==='Not Ready')?'Examena not ready':'Overdue follow-up')+'</td></tr>'));
+document.getElementById('activity').innerHTML=data.activity.map(a=>'<p><b>'+a[0]+'</b><br><span style="font-size:12px;color:#6d778a">'+a[1]+'</span></p>').join('')}
+function renderWorkflow(){let steps=[['1. Enquiry','Create prospect and check eligibility.'],['2. Registration','Create student and programme record.'],['3. Module registration','Full, Resit or Deferment.'],['4. Payment','Confirm fee or waiver.'],['5. Exam readiness','Examena, docket and candidate preparation.'],['6. Examination','Candidate sits exam.'],['7. Results','Pass, fail, absent or deferred outcome.'],['8. STAX','Required before programme completion.'],['9. Completion','Certificate and archive.']];document.getElementById('flow').innerHTML=steps.map(s=>'<div class="step"><b>'+s[0]+'</b><span>'+s[1]+'</span></div>').join('')}
+function renderStudents(){let q=(document.getElementById('studentSearch')?.value||'').toLowerCase(),st=document.getElementById('studentStatus')?.value||'';let rows=data.students.filter(s=>(!q||(s.name+s.id+s.email).toLowerCase().includes(q))&&(!st||s.status===st));document.getElementById('studentsTable').innerHTML=table(['Student','Status','Track','Remaining','Progress','STAX','Risk'],rows.map(s=>{let p=Math.round((8-s.remaining)/8*100);return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+s.name+'</button><br><small>'+s.id+'</small></td><td>'+badge(s.status)+'</td><td>'+badge(s.track)+'</td><td>'+s.remaining+'</td><td><div class="progress"><i style="width:'+p+'%"></i></div><small>'+p+'%</small></td><td>'+badge(s.stax)+'</td><td>'+badge(s.risk)+'</td></tr>'}))}
+function renderExams(){document.getElementById('examsTable').innerHTML=table(['Student','Module','Diet','Registration','Payment','Examena','Result','Action'],data.exams.map(e=>'<tr><td><button class="link" onclick="openStudent(\''+e.student+'\')">'+nameOf(e.student)+'</button></td><td><b>'+e.module+'</b></td><td>'+e.diet+'</td><td>'+badge(e.registration)+'</td><td>'+badge(e.payment)+'</td><td>'+badge(e.examena)+'</td><td>'+badge(e.result)+'</td><td><button class="btn small alt" onclick="advanceExam(\''+e.id+'\')">Update</button></td></tr>'))}
+function advanceExam(id){let e=data.exams.find(x=>x.id===id);if(e.payment==='Pending')e.payment='Paid';else if(e.examena==='Not Ready')e.examena='Ready';else if(e.result==='Pending'){e.result='Pass';let s=student(e.student);if(s&&s.remaining>0)s.remaining--}else if(e.result==='Pass')e.result='Fail';else e.result='Pending';data.activity.unshift(['Exam',e.module+' updated for '+nameOf(e.student)]);data.activity=data.activity.slice(0,5);save();renderAll()}
+function renderCompletion(){document.getElementById('completionTable').innerHTML=table(['Student','Modules remaining','STAX','Programme status','Action'],data.students.filter(s=>s.status!=='Prospect').map(s=>{let ready=s.remaining===0&&s.stax==='Completed';return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+s.name+'</button></td><td>'+s.remaining+'</td><td>'+badge(s.stax)+'</td><td>'+badge(ready?'Ready for completion':s.status)+'</td><td><button class="btn small alt" onclick="toggleStax(\''+s.id+'\')">'+(s.stax==='Completed'?'Reset STAX':'Complete STAX')+'</button></td></tr>'}))}
+function toggleStax(id){let s=student(id);s.stax=s.stax==='Completed'?'Not Started':'Completed';if(s.remaining===0&&s.stax==='Completed')s.status='Completed';save();renderAll()}
+function renderCases(){document.getElementById('casesTable').innerHTML=table(['Case','Student','Type','Priority','Status','Owner','Action'],data.cases.map(c=>'<tr><td><b>'+c.id+'</b></td><td>'+nameOf(c.student)+'</td><td>'+c.type+'</td><td>'+badge(c.priority)+'</td><td>'+badge(c.status)+'</td><td>'+c.owner+'</td><td><button class="btn small alt" onclick="advanceCase(\''+c.id+'\')">Advance</button></td></tr>'))}
+function advanceCase(id){let c=data.cases.find(x=>x.id===id),f=['New','In Progress','Waiting for Student','Resolved','Closed'];c.status=f[(f.indexOf(c.status)+1)%f.length];save();renderAll()}
+function renderTasks(){document.getElementById('tasksTable').innerHTML=table(['Task','Student','Priority','Status','Action'],data.tasks.map(t=>'<tr><td>'+t.task+'<br><small>'+t.id+'</small></td><td>'+nameOf(t.student)+'</td><td>'+badge(t.priority)+'</td><td>'+badge(t.status)+'</td><td><button class="btn small alt" onclick="toggleTask(\''+t.id+'\')">'+(t.status==='Done'?'Reopen':'Complete')+'</button></td></tr>'))}
+function toggleTask(id){let t=data.tasks.find(x=>x.id===id);t.status=t.status==='Done'?'Open':'Done';save();renderAll()}
+function renderTeachout(){let pool=data.students.filter(s=>!['Completed','Prospect'].includes(s.status));document.getElementById('teachKpis').innerHTML=[['Existing students',pool.length],['1 module left',pool.filter(s=>s.remaining===1).length],['Fast-track',pool.filter(s=>s.exemptions===5).length],['Inactive',pool.filter(s=>s.status==='Inactive').length],['Last diet','Nov 2028']].map(x=>'<div class="card kpi"><span>'+x[0]+'</span><b style="font-size:'+(typeof x[1]==='number'?'28':'18')+'px">'+x[1]+'</b></div>').join('');document.getElementById('teachTable').innerHTML=table(['Student','Remaining','STAX','Risk','Shelf life','Planning view'],pool.sort((a,b)=>a.remaining-b.remaining).map(s=>'<tr><td>'+s.name+'</td><td>'+s.remaining+'</td><td>'+badge(s.stax)+'</td><td>'+badge(s.risk)+'</td><td>'+badge(s.shelf)+'</td><td>'+(s.status==='Inactive'?'Reactivation review':s.remaining<=1?'Nearest diet completion':s.remaining<=3?'Plan 1–2 diets':'Longer runway')+'</td></tr>'))}
+function openStudent(id){let s=student(id),ex=data.exams.filter(e=>e.student===id),cs=data.cases.filter(c=>c.student===id),ts=data.tasks.filter(t=>t.student===id);document.getElementById('drawer').innerHTML='<button class="close" onclick="closeDrawer()">✕</button><h2>'+s.name+'</h2><p>'+s.id+' • '+s.email+'</p><div class="kv"><span>Status</span><b>'+s.status+'</b></div><div class="kv"><span>Track</span><b>'+s.track+'</b></div><div class="kv"><span>Modules remaining</span><b>'+s.remaining+'</b></div><div class="kv"><span>Exemptions</span><b>'+s.exemptions+'</b></div><div class="kv"><span>STAX</span><b>'+s.stax+'</b></div><div class="kv"><span>Shelf life</span><b>'+s.shelf+'</b></div><h3>Exam records</h3>'+(ex.length?ex.map(e=>'<div class="kv"><span>'+e.module+' '+e.diet+'</span><b>'+e.registration+' / '+e.result+'</b></div>').join(''):'<p>No exam records.</p>')+'<h3>Cases</h3>'+(cs.length?cs.map(c=>'<div class="kv"><span>'+c.id+'</span><b>'+c.type+' — '+c.status+'</b></div>').join(''):'<p>No cases.</p>')+'<h3>Tasks</h3>'+(ts.length?ts.map(t=>'<div class="kv"><span>'+t.id+'</span><b>'+t.task+' — '+t.status+'</b></div>').join(''):'<p>No tasks.</p>');document.getElementById('drawerbg').classList.add('open')}
+function closeDrawer(){document.getElementById('drawerbg').classList.remove('open')}document.getElementById('drawerbg').onclick=e=>{if(e.target.id==='drawerbg')closeDrawer()}
+function addProspect(){let n=data.students.length+1;data.students.push({id:'DEMO-'+String(n).padStart(3,'0'),name:'New Demo Prospect '+n,email:'prospect'+n+'@example.test',status:'Prospect',track:'Prospect',remaining:8,exemptions:0,stax:'Not Started',risk:'Normal',shelf:'Not started',intake:'—'});save();renderAll()}
+function addCase(){let n=data.cases.length+1;data.cases.push({id:'CASE-'+String(n).padStart(3,'0'),student:'DEMO-001',type:'General enquiry',priority:'Medium',status:'New',owner:'Students Team'});save();renderAll()}
+function report(type){let out=[];if(type==='remaining'){out.push('REMAINING MODULES');[0,1,2,3,4,5,6,7,8].forEach(n=>{let a=data.students.filter(s=>s.remaining===n&&s.status!=='Prospect');if(a.length)out.push(n+' remaining: '+a.length+' — '+a.map(x=>x.name).join(', '))})}if(type==='fast'){out.push('FAST-TRACK');data.students.filter(s=>s.exemptions===5).forEach(s=>out.push(s.id+' | '+s.name+' | '+s.remaining+' modules remaining'))}if(type==='risk'){out.push('RISK REVIEW');data.students.filter(s=>s.risk==='High'||s.shelf==='Expired').forEach(s=>out.push(s.id+' | '+s.name+' | Risk: '+s.risk+' | Shelf: '+s.shelf))}if(type==='completion'){out.push('COMPLETION CANDIDATES');data.students.filter(s=>s.remaining<=1&&s.status!=='Completed'&&s.status!=='Prospect').forEach(s=>out.push(s.id+' | '+s.name+' | Remaining: '+s.remaining+' | STAX: '+s.stax))}document.getElementById('reportBox').textContent=out.join('\n')||'No matching records.'}
+function resetDemo(){if(confirm('Reset all fake demo changes?')){data=clone();save();renderAll()}}
+function renderAll(){renderDashboard();renderWorkflow();renderStudents();renderExams();renderCompletion();renderCases();renderTasks();renderTeachout()}
+document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>(x.name+x.id).toLowerCase().includes(q));if(s)openStudent(s.id)};renderAll();
+</script>
+</body>
+</html>
