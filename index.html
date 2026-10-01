@@ -16,11 +16,52 @@
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.sectionlabel{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8ca7bb;padding:14px 11px 5px}.mini{font-size:11px;color:var(--muted)}.modulegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.modulebox{border:1px solid var(--line);border-radius:10px;padding:9px;background:#fbfcfe}.modulebox b{display:block;font-size:11px}.modulebox span{font-size:10px;color:var(--muted)}.stack{display:grid;gap:10px}.alertrow{border-left:3px solid var(--amber);padding:8px 10px;background:#fffaf1;border-radius:0 8px 8px 0;font-size:12px}.filters input,.filters select{border:1px solid var(--line);background:white;padding:8px 10px;border-radius:8px}.progress{width:100px;height:7px;background:#edf1f5;border-radius:999px;overflow:hidden}.progress i{display:block;height:100%;background:var(--green)}
 .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.step{background:white;border:1px solid var(--line);border-radius:12px;padding:14px}.step b{display:block;margin-bottom:5px;font-size:13px}.step span{font-size:11px;color:var(--muted)}
 .drawerbg{display:none;position:fixed;inset:0;background:rgba(12,20,30,.38);z-index:20}.drawerbg.open{display:block}.drawer{position:absolute;right:0;top:0;bottom:0;width:min(520px,94vw);background:white;padding:22px;overflow:auto}.drawer h2{margin-top:0}.kv{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid #f0f2f5}.kv span{color:var(--muted)}.close{float:right;border:0;background:#eef2f5;border-radius:8px;padding:7px 9px}.notice{background:#fff7e9;border:1px solid #f1d3a3;color:#7a511a;padding:11px 12px;border-radius:10px;font-size:12px;margin-bottom:12px}.report{white-space:pre-wrap;background:#111827;color:#dbe7f1;padding:14px;border-radius:10px;min-height:120px;font-size:12px}
-@media(max-width:900px){.modulegrid{grid-template-columns:repeat(2,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.app{grid-template-columns:1fr}.side{position:fixed;left:-255px;width:240px;z-index:15;transition:.2s}.side.open{left:0}.menu{display:block}.content{padding:16px}.top{padding:0 12px}.tag{display:none!important}.head{align-items:stretch}.kpis{grid-template-columns:1fr 1fr}}
+.portal-shell{min-height:100vh;background:linear-gradient(135deg,#eef5fa 0%,#f8fafc 50%,#edf4f8 100%);display:grid;grid-template-columns:1.05fr .95fr}
+.portal-hero{padding:72px clamp(28px,7vw,100px);background:#102b41;color:white;display:flex;flex-direction:column;justify-content:center;min-height:100vh}
+.portal-hero .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#9fc2d9;font-weight:800}
+.portal-hero h1{font-size:clamp(36px,5vw,62px);line-height:1.04;margin:16px 0;max-width:650px}
+.portal-hero p{font-size:16px;line-height:1.7;color:#d8e6ef;max-width:610px}
+.portal-steps{display:grid;gap:10px;margin-top:26px;max-width:560px}
+.portal-step{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);padding:12px 14px;border-radius:12px}
+.portal-step i{font-style:normal;background:#2d6286;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 26px}
+.portal-step b{display:block;font-size:13px}.portal-step span{font-size:11px;color:#bed0dc}
+.portal-main{display:flex;align-items:center;justify-content:center;padding:40px 24px}
+.auth-card{width:min(520px,100%);background:white;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px rgba(16,43,65,.14);padding:26px}
+.auth-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.auth-top h2{margin:0 0 4px;font-size:25px}.auth-top p{margin:0;color:var(--muted);font-size:12px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;background:#f1f5f8;padding:4px;border-radius:10px;margin-bottom:18px}
+.auth-tabs button{border:0;background:transparent;padding:9px;border-radius:8px;font-weight:800;color:#6c7889}.auth-tabs button.active{background:white;color:var(--brand);box-shadow:0 2px 8px rgba(20,40,60,.08)}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:800;color:#4e5b6c}
+.field input{width:100%;border:1px solid #dce3ea;background:white;border-radius:9px;padding:10px 11px;outline:none}.field input:focus{border-color:#6da0c2;box-shadow:0 0 0 3px #e5f1f8}
+.checkrow{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:11px;color:#5f6b7c;line-height:1.5}.checkrow input{margin-top:3px}
+.auth-error{display:none;background:#fdecef;color:#9f3040;border:1px solid #f5cbd1;padding:10px;border-radius:8px;font-size:11px;margin-bottom:12px}.auth-error.show{display:block}
+.auth-note{background:#fff8e9;border:1px solid #f2d7a8;color:#78521d;padding:10px;border-radius:9px;font-size:11px;line-height:1.5;margin-bottom:14px}
+.auth-actions{display:flex;gap:8px;align-items:center}.auth-actions .btn{flex:1}.textbtn{border:0;background:none;color:var(--brand);font-weight:800;padding:8px}
+.verify-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#e8f3fa;color:#225f88;font-size:25px;margin-bottom:14px}
+.portal-summary{display:grid;gap:10px;margin:16px 0}.portal-summary .sum{border:1px solid var(--line);border-radius:10px;padding:12px}.portal-summary .sum span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase}.portal-summary .sum b{font-size:13px}
+.portal-demo-warning{font-size:10px;color:#8a5c15;margin-top:12px;text-align:center}
+.staff-shortcut{border:1px solid rgba(255,255,255,.2);background:transparent;color:white;border-radius:9px;padding:8px 11px;font-weight:800;width:max-content;margin-top:24px}
+@media(max-width:900px){.portal-shell{grid-template-columns:1fr}.portal-hero{min-height:auto;padding:40px 24px}.portal-main{padding:24px 14px}.modulegrid{grid-template-columns:repeat(2,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.app{grid-template-columns:1fr}.side{position:fixed;left:-255px;width:240px;z-index:15;transition:.2s}.side.open{left:0}.menu{display:block}.content{padding:16px}.top{padding:0 12px}.tag{display:none!important}.head{align-items:stretch}.kpis{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="portal-shell" id="publicPortal">
+<section class="portal-hero">
+  <div class="eyebrow">CGQP Student Portal — Demo</div>
+  <h1>Start your programme journey online.</h1>
+  <p>Create an account first. Your account lets you return to your application, receive updates and later access your student information.</p>
+  <div class="portal-steps">
+    <div class="portal-step"><i>1</i><div><b>Create an account</b><span>Email, mobile number and password.</span></div></div>
+    <div class="portal-step"><i>2</i><div><b>Verify your email</b><span>Confirm that the email address belongs to you.</span></div></div>
+    <div class="portal-step"><i>3</i><div><b>Start your application</b><span>Eligibility and exemption information comes next.</span></div></div>
+  </div>
+  <button class="staff-shortcut" onclick="showStaff()">Open staff demo</button>
+</section>
+<section class="portal-main">
+  <div class="auth-card" id="portalCard"></div>
+</section>
+</div>
+<div class="app" id="staffApp" style="display:none">
 <aside class="side" id="side">
 <div class="brand">Operations Hub<small>CGQP operations prototype • V2</small></div>
 <div class="demo"><b>DEMO — FAKE DATA ONLY</b><br>Changes stay only in this browser and can be reset anytime.</div>
@@ -48,7 +89,7 @@
 </nav>
 </aside>
 <main class="main">
-<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search fake student by name or ID"><span class="tag">DEMO MODE</span></header>
+<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search fake student by name or ID"><button class="btn small alt" onclick="showPortal()">Public portal</button><span class="tag">DEMO MODE</span></header>
 <div class="content">
 <section class="page active" id="dashboard">
 <div class="head"><div><h1>Operations Dashboard</h1><p>Live view of the fake operational records.</p></div><button class="btn alt" onclick="resetDemo()">Reset demo data</button></div>
@@ -180,10 +221,48 @@ audit:[
 activity:[['Exam','DEMO-003 payment requires action'],['Case','STAX follow-up opened for DEMO-004'],['Task','Inactive student review is overdue']]
 };
 const clone=()=>JSON.parse(JSON.stringify(seed));let data;try{data=JSON.parse(localStorage.getItem('operationsHubDemoV2'))||clone()}catch(e){data=clone()}
+data.enquiries=data.enquiries||[];data.materials=data.materials||[];data.communications=data.communications||[];data.audit=data.audit||[];
 const save=()=>localStorage.setItem('operationsHubDemoV2',JSON.stringify(data));
 const student=id=>data.students.find(x=>x.id===id);const nameOf=id=>student(id)?.name||id;
 const stamp=()=>new Date().toLocaleString('en-SG',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 function logAction(action,detail){data.audit.unshift({time:stamp(),action,detail});data.audit=data.audit.slice(0,80);}
+let portalAccounts=[];try{portalAccounts=JSON.parse(localStorage.getItem('operationsHubPortalAccounts'))||[]}catch(e){portalAccounts=[]}
+let activePortalAccount=null;
+const savePortal=()=>localStorage.setItem('operationsHubPortalAccounts',JSON.stringify(portalAccounts));
+async function hashText(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function showPortal(mode='register'){document.getElementById('staffApp').style.display='none';document.getElementById('publicPortal').style.display='grid';if(activePortalAccount&&activePortalAccount.verified)renderPortalHome();else renderAuth(mode);window.scrollTo(0,0)}
+function showStaff(){document.getElementById('publicPortal').style.display='none';document.getElementById('staffApp').style.display='grid';renderAll();window.scrollTo(0,0)}
+function renderAuth(mode='register'){
+ const card=document.getElementById('portalCard');
+ if(mode==='signin'){
+  card.innerHTML='<div class="auth-top"><div><h2>Sign in</h2><p>Return to your demo portal account.</p></div></div><div class="auth-tabs"><button onclick="renderAuth(\'register\')">Create account</button><button class="active">Sign in</button></div><div class="auth-note">Demo only. Use fake information. Passwords are hashed locally in this browser and are not sent anywhere.</div><div class="auth-error" id="authError"></div><form onsubmit="signInPortal(event)"><div class="formgrid"><div class="field full"><label>Email address</label><input id="loginEmail" type="email" required placeholder="demo@example.test"></div><div class="field full"><label>Password</label><input id="loginPassword" type="password" required minlength="8" placeholder="Minimum 8 characters"></div></div><div class="auth-actions" style="margin-top:16px"><button class="btn primary" type="submit">Sign in</button></div></form><div class="portal-demo-warning">DEMO — do not enter real personal information.</div>';
+  return;
+ }
+ card.innerHTML='<div class="auth-top"><div><h2>Create your account</h2><p>This creates a portal account and a new enquiry/prospect record.</p></div></div><div class="auth-tabs"><button class="active">Create account</button><button onclick="renderAuth(\'signin\')">Sign in</button></div><div class="auth-note">For testing, use fake details only. A real system would send an email verification and store credentials in a secure authentication service.</div><div class="auth-error" id="authError"></div><form onsubmit="registerPortal(event)"><div class="formgrid"><div class="field full"><label>Full name</label><input id="regName" required placeholder="e.g. Jamie Demo"></div><div class="field full"><label>Email address</label><input id="regEmail" type="email" required placeholder="jamie.demo@example.test"></div><div class="field full"><label>Mobile number</label><input id="regPhone" required placeholder="+65 9000 1234"></div><div class="field"><label>Password</label><input id="regPassword" type="password" minlength="8" required placeholder="Minimum 8 characters"></div><div class="field"><label>Confirm password</label><input id="regConfirm" type="password" minlength="8" required placeholder="Repeat password"></div></div><label class="checkrow"><input id="regConsent" type="checkbox" required><span>I agree to the demo privacy notice and consent to my information being used for this application workflow.</span></label><div class="auth-actions"><button class="btn primary" type="submit">Create account</button></div></form><div class="portal-demo-warning">DEMO — do not enter real personal information.</div>';
+}
+function authError(msg){let e=document.getElementById('authError');if(e){e.textContent=msg;e.classList.add('show')}}
+async function registerPortal(ev){
+ ev.preventDefault();
+ const name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),phone=document.getElementById('regPhone').value.trim(),pw=document.getElementById('regPassword').value,cf=document.getElementById('regConfirm').value;
+ if(pw!==cf)return authError('Passwords do not match.');
+ if(portalAccounts.some(a=>a.email===email))return authError('A demo account with this email already exists.');
+ const id='ACC-'+String(portalAccounts.length+1).padStart(3,'0'),prospectId='WEB-'+String(portalAccounts.length+1).padStart(3,'0');
+ const account={id,prospectId,name,email,phone,passwordHash:await hashText(pw),verified:false,createdAt:stamp(),applicationStatus:'Not Started'};
+ portalAccounts.push(account);savePortal();activePortalAccount=account;
+ if(!data.students.some(s=>s.id===prospectId))data.students.push({id:prospectId,name,email,phone,status:'Prospect',track:'Prospect',remaining:8,exemptions:0,stax:'Not Started',risk:'Normal',shelf:'Not started',intake:'—',latest:'—',certificate:'Not Ready'});
+ if(!data.enquiries.some(e=>e.student===prospectId))data.enquiries.push({id:'ENQ-'+String(data.enquiries.length+1).padStart(3,'0'),student:prospectId,source:'Online Account Registration',eligibility:'Not Assessed',exemption:'Not Assessed',status:'Open'});
+ logAction('Portal','New online account created for '+prospectId);save();renderVerify();
+}
+function renderVerify(){
+ const a=activePortalAccount;document.getElementById('portalCard').innerHTML='<div class="verify-icon">✉</div><div class="auth-top"><div><h2>Verify your email</h2><p>A real system would send a verification link.</p></div></div><div class="auth-note">Demo verification for <b>'+a.email+'</b>. No email is actually sent.</div><div class="auth-actions"><button class="btn primary" onclick="verifyPortal()">Simulate email verified</button></div><button class="textbtn" onclick="renderAuth(\'signin\')">Back to sign in</button>';
+}
+function verifyPortal(){if(!activePortalAccount)return;activePortalAccount.verified=true;savePortal();logAction('Portal',activePortalAccount.prospectId+' email verified');save();renderPortalHome()}
+function renderPortalHome(){
+ const a=activePortalAccount;document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Welcome, '+a.name+'</h2><p>Your demo portal account is active.</p></div><span class="badge g">Email verified</span></div><div class="portal-summary"><div class="sum"><span>Portal account</span><b>'+a.id+'</b></div><div class="sum"><span>Prospect reference</span><b>'+a.prospectId+'</b></div><div class="sum"><span>Application status</span><b>'+a.applicationStatus+'</b></div></div><div class="auth-note">The staff Operations Hub now contains a corresponding prospect and open enquiry. This is the handoff from the public portal to internal operations.</div><div class="auth-actions"><button class="btn primary" onclick="startPortalApplication()">Start application</button><button class="btn alt" onclick="portalSignOut()">Sign out</button></div>';
+}
+function startPortalApplication(){activePortalAccount.applicationStatus='Started';savePortal();logAction('Portal',activePortalAccount.prospectId+' application started');let en=data.enquiries.find(e=>e.student===activePortalAccount.prospectId);if(en)en.status='Review Required';save();document.getElementById('portalCard').innerHTML='<div class="verify-icon">✓</div><div class="auth-top"><div><h2>Application started</h2><p>Account registration is complete.</p></div></div><div class="auth-note">Next system stage: <b>Application & Eligibility</b>. We can build that form next, including qualification details, exemption request and document upload requirements.</div><div class="auth-actions"><button class="btn primary" onclick="renderPortalHome()">Back to account home</button><button class="btn alt" onclick="showStaff()">View staff handoff</button></div>'}
+async function signInPortal(ev){ev.preventDefault();let email=document.getElementById('loginEmail').value.trim().toLowerCase(),pw=document.getElementById('loginPassword').value;let a=portalAccounts.find(x=>x.email===email);if(!a||a.passwordHash!==await hashText(pw))return authError('Email or password is incorrect.');activePortalAccount=a;if(!a.verified)renderVerify();else renderPortalHome()}
+function portalSignOut(){activePortalAccount=null;renderAuth('signin')}
 function badge(v){let c=/Completed|Paid|Ready|Pass|Done|Valid|Normal/.test(v)?'g':/Pending|Medium|Waiting|Open|Not Started/.test(v)?'a':/High|Expired|Overdue|Not Ready|Fail/.test(v)?'r':/Active|Full|Resit|Fast/.test(v)?'b':'x';return '<span class="badge '+c+'">'+v+'</span>'}
 function table(h,rows){return '<div class="tablewrap"><table class="tbl"><thead><tr>'+h.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td colspan="'+h.length+'">No matching fake records.</td></tr>')+'</tbody></table></div>'}
 function go(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));document.getElementById('side').classList.remove('open')}
@@ -228,7 +307,7 @@ function renderAudit(){document.getElementById('auditTable').innerHTML=table(['T
 function report(type){let out=[];if(type==='remaining'){out.push('REMAINING MODULES');[0,1,2,3,4,5,6,7,8].forEach(n=>{let a=data.students.filter(s=>s.remaining===n&&s.status!=='Prospect');if(a.length)out.push(n+' remaining: '+a.length+' — '+a.map(x=>x.name).join(', '))})}if(type==='fast'){out.push('FAST-TRACK');data.students.filter(s=>s.exemptions===5).forEach(s=>out.push(s.id+' | '+s.name+' | '+s.remaining+' modules remaining'))}if(type==='risk'){out.push('RISK REVIEW');data.students.filter(s=>s.risk==='High'||s.shelf==='Expired').forEach(s=>out.push(s.id+' | '+s.name+' | Risk: '+s.risk+' | Shelf: '+s.shelf))}if(type==='completion'){out.push('COMPLETION CANDIDATES');data.students.filter(s=>s.remaining<=1&&s.status!=='Completed'&&s.status!=='Prospect').forEach(s=>out.push(s.id+' | '+s.name+' | Remaining: '+s.remaining+' | STAX: '+s.stax))}if(type==='quality'){out.push('DATA QUALITY');qualityIssues().forEach(i=>out.push(i[0]+' | '+i[2]+' | '+i[1]))}document.getElementById('reportBox').textContent=out.join('\n')||'No matching records.'}
 function resetDemo(){if(confirm('Reset all fake demo changes?')){data=clone();logAction('System','Demo data reset to V2 seed');save();renderAll()}}
 function renderAll(){renderDashboard();renderWorkflow();renderStudents();renderEnquiries();renderExams();renderPayments();renderMaterials();renderCompletion();renderCertificates();renderCases();renderTasks();renderCommunications();renderTeachout();renderQuality();renderAudit()}
-document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>(x.name+x.id).toLowerCase().includes(q));if(s)openStudent(s.id)};renderAll();
+document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>(x.name+x.id).toLowerCase().includes(q));if(s)openStudent(s.id)};renderAll();renderAuth('register');
 </script>
 </body>
 </html>
