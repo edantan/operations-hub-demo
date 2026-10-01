@@ -871,7 +871,7 @@ function renderComponentOfferings(){
 function addComponentOffering(){
  const attendance=data.programmeComponents.filter(c=>c.assessmentMethod==='attendance'&&data.programmes.find(p=>p.id===c.programmeId)?.status!=='Archived');if(!attendance.length)return alert('No attendance/session-based programme component is configured.');
  const choices=attendance.map((c,i)=>(i+1)+'. '+programmeName(c.programmeId)+' — '+c.name+' ('+c.code+')').join('\n'),pick=Number(prompt('Select the attendance/session component:\n'+choices,'1'))-1,c=attendance[pick];if(!c)return;
- const label=prompt('Offering label:',c.code+' — Mar/Apr 2028');if(!label)return,registrationOpen=prompt('Registration opens:','01 Jan 2028')||'',registrationClose=prompt('Registration closes:','15 Feb 2028')||'',id='OFFER-'+c.code+'-'+Date.now();
+ const label=prompt('Offering label:',c.code+' — Mar/Apr 2028');if(!label)return;const registrationOpen=prompt('Registration opens:','01 Jan 2028')||'',registrationClose=prompt('Registration closes:','15 Feb 2028')||'',id='OFFER-'+c.code+'-'+Date.now();
  data.componentOfferings.push({id,programmeId:c.programmeId,programmeVersionId:data.programmes.find(p=>p.id===c.programmeId)?.currentVersion,componentCode:c.code,label,registrationOpen,registrationClose,status:'Draft',mode:'Zoom',sessions:[]});logAction('Session Offering','Created '+label);save();renderAll();manageComponentOffering(id)
 }
 function cycleComponentOfferingStatus(id){const o=data.componentOfferings.find(x=>x.id===id),f=['Draft','Scheduled','Open','Closed'];if(!o)return;o.status=f[(f.indexOf(o.status)+1)%f.length];logAction('Session Offering',o.label+' changed to '+o.status);save();renderAll()}
