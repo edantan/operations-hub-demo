@@ -139,6 +139,7 @@
 
 <section class="page" id="students">
 <div class="head"><div><h1>Students / CRM</h1><p>Open a student to review programme progress, exemptions, complete attempt history, results and linked operational records.</p></div><button class="btn primary" onclick="addProspect()">+ Add person / student</button></div>
+<div class="notice"><b>Backend result convention:</b> a result of <b>1</b> means the module has been attempted or registered but is still outstanding. A blank module/date means it has never been attempted. Open a student record to view the full CLAW / CCA / CG / BDY / IFAI / DOS / RM / STAX paired backend layout.</div>
 <div class="filters"><input id="studentSearch" placeholder="Search student"><select id="studentStatus"><option value="">All statuses</option><option>Active</option><option>Inactive</option><option>Completed</option><option>Prospect</option></select></div>
 <div id="studentsTable"></div>
 </section>
@@ -1219,12 +1220,62 @@ let att=data.students.filter(s=>s.risk==='High'||s.shelf==='Expired'||data.exams
 document.getElementById('attention').innerHTML=table(['Student','Risk','Issue'],att.map(s=>'<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+s.name+'</button><br><small>'+s.id+'</small></td><td>'+badge(s.risk)+'</td><td>'+(s.shelf==='Expired'?'Shelf life expired':data.exams.some(e=>e.student===s.id&&e.payment==='Pending')?'Payment pending':data.exams.some(e=>e.student===s.id&&e.examena==='Not Ready')?'Examena not ready':'Overdue follow-up')+'</td></tr>'));
 document.getElementById('activity').innerHTML=data.activity.map(a=>'<p><b>'+a[0]+'</b><br><span style="font-size:12px;color:#6d778a">'+a[1]+'</span></p>').join('');syncLiveClassesFromOfferings();const next7Classes=data.liveClasses.reduce((n,c)=>n+(c.sessions||[]).filter(s=>{const d=dateSortValue(s.date)-Date.now();return d>=0&&d<=7*86400000}).length,0);document.getElementById('operationsKpis').innerHTML=[['Eligibility review',data.applications.filter(a=>['Under Review','Additional Information Required'].includes(a.status)).length],['Registration pending',data.registrations.filter(r=>!['Draft','Confirmed','Cancelled'].includes(r.status)).length],['Payment verification',data.registrations.filter(r=>r.paymentEvidenceDocumentId&&r.paymentStatus!=='Verified'&&r.status!=='Cancelled').length],['Document requests',data.documentRequests.filter(r=>r.status==='Requested').length],['Assignments to mark',data.assignmentSubmissions.filter(s=>s.status==='Submitted').length],['Classes next 7 days',next7Classes],['Open surveys',data.surveys.filter(s=>s.status==='Open').length],['Automation tasks',data.tasks.filter(t=>t.automationKey&&t.status!=='Done').length]].map(x=>'<div class="card kpi"><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');renderCertificateVerificationDashboard()}
 function renderWorkflow(){let steps=[['1. Account / Enquiry','Create a person record and portal account.'],['2. Eligibility','Collect qualifications and programme-specific documents.'],['3. Exemption','Assess exemptions only when the programme allows them.'],['4. Intake Registration','Select an open intake after assessment.'],['5. Assessment Readiness','Payment, materials, system access and logistics.'],['6. Assessment','Exam, assignment, presentation, sessions or other configured method.'],['7. Results','Publish assessment outcomes and progression.'],['8. Completion Requirements','Track programme-specific non-assessment requirements.'],['9. Completion','Programme completion, certificate and archive.']];document.getElementById('flow').innerHTML=steps.map(s=>'<div class="step"><b>'+s[0]+'</b><span>'+s[1]+'</span></div>').join('')}
+
+function masterDateToken(value){
+ const s=String(value||'').trim();if(!s)return '';
+ if(/^[A-Za-z]{3}[- ]?\d{2}$/.test(s))return s.replace(' ','-');
+ if(/^[A-Za-z]{3,9}\s+\d{4}$/.test(s)){const p=s.split(/\s+/),m=p[0].slice(0,3);return m.charAt(0).toUpperCase()+m.slice(1).toLowerCase()+'-'+p[1].slice(-2)}
+ if(/^\d{4}-\d{2}-\d{2}$/.test(s)){const d=new Date(s+'T12:00:00');return d.toLocaleDateString('en-SG',{month:'short',year:'2-digit'}).replace(' ','-')}
+ return s
+}
+function masterAttemptSuffix(result){
+ const r=String(result||'').trim().toLowerCase();
+ if(r==='fail')return 'F';
+ if(r==='fail a')return 'Fa';
+ if(r==='fail b')return 'Fb';
+ if(r==='fail c')return 'Fc';
+ if(r==='absent')return 'AB';
+ if(r==='deferred')return 'DF';
+ return ''
+}
+function masterModulePair(studentId,module){
+ const s=student(studentId),hist=moduleHistoryForStudent(studentId).filter(h=>h.module===module),isStax=module==='STAX';
+ const exemption=hist.find(h=>h.registrationType==='Exemption'||String(h.result).toUpperCase()==='EX')||((studentExemptionModules(studentId).includes(module))?{diet:''}:null);
+ if(exemption){
+   const date=masterDateToken(exemption.diet);
+   return {attempt:date,result:'EX',balance:0,state:'Exempted'}
+ }
+ if(isStax){
+   const done=hist.filter(h=>String(h.result).toLowerCase()==='completed'||String(h.result).toUpperCase()==='CPD').slice(-1)[0];
+   if(done||s?.stax==='Completed'){const d=masterDateToken(done?.diet||'');return {attempt:d,result:'CPD',balance:0,state:'Completed'}}
+   if(!hist.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
+   const attempt=hist.map(h=>masterDateToken(h.diet)).filter(Boolean).join('/');
+   return {attempt,result:'1',balance:1,state:'Outstanding'}
+ }
+ if(!hist.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
+ const completed=hist.filter(h=>passingResults.includes(h.result)).slice(-1)[0];
+ if(completed){
+   return {attempt:masterDateToken(completed.diet),result:String(completed.result),balance:0,state:'Completed'}
+ }
+ const parts=hist.map(h=>{const d=masterDateToken(h.diet),suffix=masterAttemptSuffix(h.result);return d+(suffix?'-'+suffix:'')}).filter(Boolean);
+ return {attempt:parts.join('/'),result:'1',balance:1,state:'Outstanding'}
+}
+function masterBackendRecord(studentId){
+ const order=['CLAW','CCA','CG','BDY','IFAI','DOS','RM','STAX'],pairs={};let balance=0;
+ order.forEach(m=>{pairs[m]=masterModulePair(studentId,m);balance+=pairs[m].balance});
+ return {pairs,balance}
+}
+function backendMasterTableHtml(studentId){
+ const r=masterBackendRecord(studentId),p=r.pairs,headers=['CLAW','CLAW Result','CCA','CCA Result','CG','CG Result','BDY','BDY Result','IFAI','IFAI Result','DOS','DOS Result','RM','RM Result','STAX','STAX CPD','Total Balance Subjects'];
+ const cells=['CLAW','CCA','CG','BDY','IFAI','DOS','RM','STAX'].flatMap(m=>['<td><b>'+esc(p[m].attempt)+'</b></td>','<td><b>'+esc(p[m].result)+'</b></td>']).join('');
+ return '<div class="tablewrap"><table class="tbl" style="min-width:1450px"><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody><tr>'+cells+'<td><b>'+r.balance+'</b></td></tr></tbody></table></div><p class="form-note"><b>Backend rule:</b> Result <b>1</b> means attempted/registered but not yet passed. Blank module/date and blank result mean the module has never been attempted. Total Balance Subjects counts every required module still outstanding, including STAX where not completed or exempted.</p>'
+}
 function renderStudents(){
  let q=(document.getElementById('studentSearch')?.value||'').toLowerCase(),st=document.getElementById('studentStatus')?.value||'';
  let rows=data.students.filter(s=>(!q||(s.name+s.id+s.email).toLowerCase().includes(q))&&(!st||s.status===st));
- document.getElementById('studentsTable').innerHTML=table(['Student','Status','Track','Exemptions','Attempts','Remaining','STAX','Latest','Action'],rows.map(s=>{
-   const ex=studentExemptionModules(s.id),attempts=studentAttemptTotal(s.id),latest=moduleHistoryForStudent(s.id).filter(h=>h.registrationType!=='Exemption').slice(-1)[0];
-   return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+esc(s.name)+'</button><br><small>'+esc(s.id)+'</small></td><td>'+badge(s.status)+'</td><td>'+badge(s.track)+'</td><td><b>'+ex.length+'</b>'+(ex.length?'<br><small>'+esc(ex.join(', '))+'</small>':'')+'</td><td><b>'+attempts+'</b></td><td><b>'+s.remaining+'</b></td><td>'+badge(s.stax)+'</td><td>'+(latest?esc(latest.module+' • '+latest.diet+' • '+latest.result):'—')+'</td><td><button class="btn small primary" onclick="openStudent(\''+s.id+'\')">Open record</button></td></tr>'
+ document.getElementById('studentsTable').innerHTML=table(['Student','Status','Track','Exemptions','Attempts','Balance Subjects','STAX','Latest','Action'],rows.map(s=>{
+   const ex=studentExemptionModules(s.id),attempts=studentAttemptTotal(s.id),latest=moduleHistoryForStudent(s.id).filter(h=>h.registrationType!=='Exemption').slice(-1)[0],master=masterBackendRecord(s.id);
+   return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+esc(s.name)+'</button><br><small>'+esc(s.id)+'</small></td><td>'+badge(s.status)+'</td><td>'+badge(s.track)+'</td><td><b>'+ex.length+'</b>'+(ex.length?'<br><small>'+esc(ex.join(', '))+'</small>':'')+'</td><td><b>'+attempts+'</b></td><td><b>'+master.balance+'</b></td><td>'+badge(s.stax)+'</td><td>'+(latest?esc(latest.module+' • '+masterDateToken(latest.diet)+' • '+latest.result):'—')+'</td><td><button class="btn small primary" onclick="openStudent(\''+s.id+'\')">Open backend record</button></td></tr>'
  }))
 }
 
@@ -1805,12 +1856,13 @@ function confirmRegistrationAdmin(id){
 }
 function renderExams(){
  syncModuleHistoryFromExams();
- const rows=data.moduleHistory.filter(h=>h.registrationType!=='Exemption'&&h.result!=='EX').sort((a,b)=>String(b.diet||'').localeCompare(String(a.diet||''))).map(h=>{
-   const e=h.sourceId?data.exams.find(x=>x.id===h.sourceId):null;
-   return '<tr><td><button class="link" onclick="openStudent(\''+h.student+'\')">'+esc(nameOf(h.student))+'</button><br><small>'+esc(h.student)+'</small></td><td><b>'+esc(h.module)+'</b><br><small>'+esc(h.examCode||e?.examCode||'—')+'</small></td><td>'+esc(h.diet||'—')+'</td><td><b>#'+Number(h.attemptNo||moduleAttemptCount(h.student,h.module))+'</b></td><td>'+badge(h.registrationType||'Full')+'</td><td>'+badge(h.payment||e?.payment||'—')+'</td><td>'+badge(h.examena||e?.examena||'—')+'</td><td>'+badge(h.result||'Pending')+'</td><td><button class="btn small primary" onclick="openAddModuleAttempt(\''+h.id+'\')">Open / Edit</button></td></tr>'
+ const rows=data.moduleHistory.filter(h=>h.registrationType!=='Exemption'&&String(h.result).toUpperCase()!=='EX').sort((a,b)=>dietSortValue(b.diet)-dietSortValue(a.diet)).map(h=>{
+   const e=h.sourceId?data.exams.find(x=>x.id===h.sourceId):null,pair=masterModulePair(h.student,h.module);
+   return '<tr><td><button class="link" onclick="openStudent(\''+h.student+'\')">'+esc(nameOf(h.student))+'</button><br><small>'+esc(h.student)+'</small></td><td><b>'+esc(h.module)+'</b><br><small>'+esc(h.examCode||e?.examCode||'—')+'</small></td><td>'+esc(pair.attempt||'')+'</td><td><b>'+esc(pair.result||'')+'</b></td><td>'+esc(masterDateToken(h.diet)||'—')+'</td><td><b>#'+Number(h.attemptNo||moduleAttemptCount(h.student,h.module))+'</b></td><td>'+badge(h.registrationType||'Full')+'</td><td>'+badge(h.result||'Pending')+'</td><td><button class="btn small primary" onclick="openAddModuleAttempt(\''+h.id+'\')">Open / Edit</button></td></tr>'
  });
- document.getElementById('examsTable').innerHTML=table(['Student','Module / Exam Code','Diet','Attempt','Registration','Payment','Examena','Result','Action'],rows)
+ document.getElementById('examsTable').innerHTML=table(['Student','Module / Exam Code','Backend Module Field','Backend Result','This Sitting','Attempt','Registration','Raw Result','Action'],rows)
 }
+
 function moduleAttemptStudentOptions(selected){return data.students.filter(s=>s.status!=='Prospect'||s.programmeId).map(s=>'<option value="'+s.id+'" '+(s.id===selected?'selected':'')+'>'+esc(s.name)+' — '+esc(s.id)+'</option>').join('')}
 function openAddModuleAttempt(id='',studentId=''){
  const h=id?data.moduleHistory.find(x=>x.id===id):null,sid=h?.student||studentId||data.students.find(s=>s.status!=='Prospect')?.id||'',s=student(sid),mods=programmeComponents(s?.programmeId||'PROG-CGQP').filter(c=>c.assessmentMethod!=='attendance');
@@ -1872,12 +1924,10 @@ function openApplicantProfile(id){
 }
 function openStudent(id){
  const s=student(id);if(!s)return;syncModuleHistoryFromExams();recalculateStudentProgress(id);
- const hist=moduleHistoryForStudent(id),examHist=hist.filter(h=>h.registrationType!=='Exemption'&&h.result!=='EX'),exMods=studentExemptionModules(id),decisions=exemptionDecisionsForStudent(id),cs=data.cases.filter(c=>c.student===id),ts=data.tasks.filter(t=>t.student===id),ms=data.materials.filter(m=>m.student===id),com=data.communications.filter(c=>c.student===id),regs=data.registrations.filter(r=>r.student===id),mods=programmeComponents(s.programmeId||'PROG-CGQP').map(c=>c.code);
- const passed=new Set(hist.filter(h=>passingResults.includes(h.result)||h.result==='Completed'||h.result==='EX').map(h=>h.module));
- const moduleHtml='<div class="modulegrid">'+mods.map(m=>{const mh=hist.filter(x=>x.module===m),latest=mh.slice(-1)[0],attempts=mh.filter(x=>x.registrationType!=='Exemption'&&x.result!=='EX').length,state=exMods.includes(m)?'EX — Exempted':m==='STAX'?s.stax:(latest?latest.result:'No attempt');return '<div class="modulebox"><b>'+esc(m)+'</b><span>'+esc(state)+'</span><span>'+(attempts?attempts+' attempt'+(attempts===1?'':'s'):'No exam attempts')+'</span></div>'}).join('')+'</div>';
- const historyRows=hist.map(h=>'<tr><td><b>'+esc(h.module)+'</b></td><td>'+esc(h.diet||'—')+'</td><td>'+(h.registrationType==='Exemption'||h.result==='EX'?'—':'#'+Number(h.attemptNo||moduleAttemptCount(id,h.module)))+'</td><td>'+badge(h.registrationType||'Full')+'</td><td>'+badge(h.result||'Pending')+'</td><td>'+(h.registrationType==='Exemption'||h.result==='EX'?'<button class="btn small alt" onclick="openExemptionDecision(\''+esc(h.sourceId||'')+'\')">Exemption</button>':'<button class="btn small alt" onclick="openAddModuleAttempt(\''+h.id+'\')">Open</button>')+'</td></tr>');
+ const hist=moduleHistoryForStudent(id),examHist=hist.filter(h=>h.registrationType!=='Exemption'&&h.result!=='EX'),exMods=studentExemptionModules(id),decisions=exemptionDecisionsForStudent(id),cs=data.cases.filter(c=>c.student===id),ts=data.tasks.filter(t=>t.student===id),ms=data.materials.filter(m=>m.student===id),com=data.communications.filter(c=>c.student===id),regs=data.registrations.filter(r=>r.student===id),master=masterBackendRecord(id);
+ const historyRows=hist.map(h=>'<tr><td><b>'+esc(h.module)+'</b></td><td>'+esc(masterDateToken(h.diet)||'—')+'</td><td>'+(h.registrationType==='Exemption'||String(h.result).toUpperCase()==='EX'?'—':'#'+Number(h.attemptNo||moduleAttemptCount(id,h.module)))+'</td><td>'+badge(h.registrationType||'Full')+'</td><td>'+badge(h.result||'Pending')+'</td><td>'+(h.registrationType==='Exemption'||String(h.result).toUpperCase()==='EX'?'<button class="btn small alt" onclick="openExemptionDecision(\''+esc(h.sourceId||'')+'\')">Exemption</button>':'<button class="btn small alt" onclick="openAddModuleAttempt(\''+h.id+'\')">Open</button>')+'</td></tr>');
  const decisionHtml=decisions.length?decisions.map(d=>'<div class="requestbox"><b>'+esc(d.id)+' — '+esc(d.status)+'</b><p><b>Qualification:</b> '+esc(d.qualification||'—')+'<br><b>Modules:</b> '+esc((d.modules||[]).join(', ')||'None')+'<br><b>Decision:</b> '+esc(d.decisionDate||'—')+' • '+esc(d.reviewer||'—')+'</p><button class="btn small alt" onclick="openExemptionDecision(\''+d.id+'\')">Open decision</button></div>').join(''):'<p>No exemption decisions recorded.</p>';
- document.getElementById('drawer').innerHTML='<button class="close" onclick="closeDrawer()">✕</button><h2>'+esc(s.name)+'</h2><p>'+esc(s.id)+' • '+esc(s.email||'')+' • '+esc(s.phone||'No phone')+'</p><div class="filters"><button class="btn small primary" onclick="openAddModuleAttempt(\'\',\''+s.id+'\')">+ Add result / attempt</button><button class="btn small primary" onclick="openAddExemption(\''+s.id+'\')">+ Add exemption</button><button class="btn small alt" onclick="addCase(\''+s.id+'\')">+ Case</button><button class="btn small alt" onclick="addCommunication(\''+s.id+'\')">+ Message</button></div><div class="reviewgrid"><div class="reviewcard"><span>Modules remaining</span><b>'+s.remaining+'</b></div><div class="reviewcard"><span>Approved exemptions</span><b>'+exMods.length+'</b></div><div class="reviewcard"><span>Total exam attempts</span><b>'+examHist.length+'</b></div><div class="reviewcard"><span>Modules completed / exempted</span><b>'+passed.size+'</b></div></div><div class="kv"><span>Status</span><b>'+esc(s.status)+'</b></div><div class="kv"><span>Track</span><b>'+esc(s.track)+'</b></div><div class="kv"><span>First intake</span><b>'+esc(s.intake||'—')+'</b></div><div class="kv"><span>Latest activity</span><b>'+esc(s.latest||'—')+'</b></div><div class="kv"><span>STAX</span><b>'+esc(s.stax)+'</b></div><div class="kv"><span>Shelf life</span><b>'+esc(s.shelf)+'</b></div><div class="kv"><span>Certificate</span><b>'+esc(s.certificate||'Not Ready')+'</b></div><h3>Module progress & attempt count</h3>'+moduleHtml+'<h3>Complete result / attempt history</h3>'+(historyRows.length?table(['Module','Diet / Decision','Attempt','Type','Result','Action'],historyRows):'<p>No module history.</p>')+'<h3>Exemption decisions</h3>'+decisionHtml+'<h3>Registrations</h3>'+(regs.length?regs.map(r=>'<div class="kv"><span>'+esc(r.id)+' • '+esc(windowById(r.intakeId)?.label||'')+'</span><b>'+esc(r.status)+' / '+esc(r.paymentStatus||'')+'</b></div>').join(''):'<p>No registration records.</p>')+'<h3>Cases</h3>'+(cs.length?cs.map(c=>'<div class="kv"><span>'+esc(c.id)+'</span><b><button class="link" onclick="openCase(\''+c.id+'\')">'+esc(c.type)+' — '+esc(c.status)+'</button></b></div>').join(''):'<p>No cases.</p>')+'<h3>Tasks</h3>'+(ts.length?ts.map(t=>'<div class="kv"><span>'+esc(t.id)+'</span><b>'+esc(t.task)+' — '+esc(t.status)+'</b></div>').join(''):'<p>No tasks.</p>')+'<h3>Materials / IRC</h3>'+(ms.length?ms.map(m=>'<div class="kv"><span>'+esc(m.diet)+'</span><b>'+esc(m.studyText)+' / '+esc(m.irc)+'</b></div>').join(''):'<p>No current materials record.</p>')+'<h3>Recent communications</h3>'+(com.length?com.slice(0,5).map(c=>'<div class="kv"><span>'+esc(c.date||'')+'</span><b>'+esc(c.subject||'')+'</b></div>').join(''):'<p>No communications.</p>');
+ document.getElementById('drawer').innerHTML='<button class="close" onclick="closeDrawer()">✕</button><h2>'+esc(s.name)+'</h2><p>'+esc(s.id)+' • '+esc(s.email||'')+' • '+esc(s.phone||'No phone')+'</p><div class="filters"><button class="btn small primary" onclick="openAddModuleAttempt(\'\',\''+s.id+'\')">+ Add result / attempt</button><button class="btn small primary" onclick="openAddExemption(\''+s.id+'\')">+ Add exemption</button><button class="btn small alt" onclick="addCase(\''+s.id+'\')">+ Case</button><button class="btn small alt" onclick="addCommunication(\''+s.id+'\')">+ Message</button></div><div class="reviewgrid"><div class="reviewcard"><span>Total Balance Subjects</span><b>'+master.balance+'</b></div><div class="reviewcard"><span>Approved Exemptions</span><b>'+exMods.length+'</b></div><div class="reviewcard"><span>Total Exam Attempts</span><b>'+examHist.length+'</b></div><div class="reviewcard"><span>STAX</span><b>'+esc(master.pairs.STAX.result||'Outstanding')+'</b></div></div><h3>Backend Module / Result Record</h3>'+backendMasterTableHtml(id)+'<h3>Student Status</h3><div class="kv"><span>Status</span><b>'+esc(s.status)+'</b></div><div class="kv"><span>Track</span><b>'+esc(s.track)+'</b></div><div class="kv"><span>First intake</span><b>'+esc(s.intake||'—')+'</b></div><div class="kv"><span>Latest activity</span><b>'+esc(s.latest||'—')+'</b></div><div class="kv"><span>Shelf life</span><b>'+esc(s.shelf)+'</b></div><div class="kv"><span>Certificate</span><b>'+esc(s.certificate||'Not Ready')+'</b></div><h3>Detailed Attempt History</h3>'+(historyRows.length?table(['Module','Diet / Decision','Attempt','Type','Raw Result','Action'],historyRows):'<p>No module history.</p>')+'<h3>Exemption Decisions</h3>'+decisionHtml+'<h3>Registrations</h3>'+(regs.length?regs.map(r=>'<div class="kv"><span>'+esc(r.id)+' • '+esc(windowById(r.intakeId)?.label||'')+'</span><b>'+esc(r.status)+' / '+esc(r.paymentStatus||'')+'</b></div>').join(''):'<p>No registration records.</p>')+'<h3>Cases</h3>'+(cs.length?cs.map(c=>'<div class="kv"><span>'+esc(c.id)+'</span><b><button class="link" onclick="openCase(\''+c.id+'\')">'+esc(c.type)+' — '+esc(c.status)+'</button></b></div>').join(''):'<p>No cases.</p>')+'<h3>Tasks</h3>'+(ts.length?ts.map(t=>'<div class="kv"><span>'+esc(t.id)+'</span><b>'+esc(t.task)+' — '+esc(t.status)+'</b></div>').join(''):'<p>No tasks.</p>')+'<h3>Materials / IRC</h3>'+(ms.length?ms.map(m=>'<div class="kv"><span>'+esc(m.diet)+'</span><b>'+esc(m.studyText)+' / '+esc(m.irc)+'</b></div>').join(''):'<p>No current materials record.</p>')+'<h3>Recent Communications</h3>'+(com.length?com.slice(0,5).map(c=>'<div class="kv"><span>'+esc(c.date||'')+'</span><b>'+esc(c.subject||'')+'</b></div>').join(''):'<p>No communications.</p>');
  document.getElementById('drawerbg').classList.add('open')
 }
 
