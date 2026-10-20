@@ -1331,8 +1331,12 @@ function renderPortalTaxInvoice(regId){
 }
 function renderPortalTaxInvoices(){
  const regs=portalRegistrations().filter(r=>r.status!=='Draft'&&r.status!=='Cancelled');
- const cards=regs.map(r=>{const inv=taxInvoiceForRegistration(r.id),fees=r.feeSnapshot||calculateRegistrationFees(r),intake=windowById(r.intakeId);return inv?'<div style="margin-bottom:16px">'+taxInvoiceHtml(inv)+'<div class="auth-actions"><button class="btn primary" onclick="downloadTaxInvoice(\''+r.id+'\')">Download Tax Invoice</button><button class="btn alt" onclick="renderRegistrationStatus(\''+r.id+'\')">View Registration</button></div></div>':'<div class="application-card"><div class="apphead"><div><h4>'+esc(r.id)+' — '+esc(intake?.label||'')+'</h4><span class="mini">'+esc(programmeName(r.programmeId))+'</span></div>'+badge(r.paymentStatus||'Not Paid')+'</div><div class="kv"><span>Amount payable</span><b>'+(fees.total==null?'Pending fee configuration':money(fees.total,fees.currency))+'</b></div><p class="mini">A tax invoice has not yet been generated for this registration.</p><button class="btn primary" onclick="requestTaxInvoice(\''+r.id+'\')">Request & Download Tax Invoice</button></div>'}).join('');
- portalPage('finance','Tax Invoices','Request and retrieve tax invoices directly from your account. Staff do not need to email the document separately.',cards||'<div class="portal-empty">No submitted registrations are available for tax-invoice generation.</div>')
+ const cards=regs.map(r=>{
+  const inv=taxInvoiceForRegistration(r.id),fees=r.feeSnapshot||calculateRegistrationFees(r),intake=windowById(r.intakeId);
+  if(inv)return '<div style="margin-bottom:16px">'+taxInvoiceHtml(inv)+'<div class="auth-actions"><button class="btn primary" onclick="downloadTaxInvoice(\''+r.id+'\')">Download Tax Invoice</button><button class="btn alt" onclick="renderRegistrationStatus(\''+r.id+'\')">View '+esc(intake?.label||'Exam')+' Registration</button></div></div>';
+  return '<div class="application-card"><div class="apphead"><div><h4>'+esc(programmeName(r.programmeId))+' — '+esc(intake?.label||'Exam intake')+'</h4><span class="mini">Tax invoice available on request</span></div></div><div class="kv"><span>Amount payable</span><b>'+(fees.total==null?'Pending fee configuration':money(fees.total,fees.currency))+'</b></div><p class="mini">No tax invoice is displayed until you request one.</p><button class="btn primary" onclick="requestTaxInvoice(\''+r.id+'\')">Request & Download Tax Invoice</button></div>'
+ }).join('');
+ portalPage('finance','Tax Invoices','Request a tax invoice only when needed. Issued invoices remain available in your account.',cards||'<div class="portal-empty">No submitted examination registrations are available for tax-invoice generation.</div>')
 }
 function portalAcademicProgressRows(studentId,programmeId){
  const comps=programmeComponents(programmeId).filter(c=>c.requirement!=='Optional');
