@@ -93,14 +93,22 @@
 <button data-page="students">Student Records</button>
 <button data-page="studentlinks">Account Linking</button>
 <button data-page="exams">Module Registration / Exams</button>
-<button data-page="materials">Materials & IRC</button>
+<button data-page="materials">LMS & Resource Library</button>
+<div class="sectionlabel">Academic Delivery</div>
+<button data-page="academiccalendar">Calendar & Timetable</button>
+<button data-page="classes">Classes & Attendance</button>
+<button data-page="assignments">Assignments</button>
+<button data-page="gradebook">Grade Book</button>
 <button data-page="completion">STAX & Completion</button>
 <button data-page="certificates">Certificates</button>
 <div class="sectionlabel">Follow-up</div>
 <button data-page="cases">Cases</button>
 <button data-page="tasks">Tasks</button>
-<button data-page="communications">Communications</button>
+<button data-page="communications">Communications & Campaigns</button>
+<button data-page="surveys">Surveys & Feedback</button>
 <div class="sectionlabel">Management</div>
+<button data-page="automation">Workflow Automation</button>
+<button data-page="integrations">Integrations</button>
 <button data-page="teachout">Teach-out</button>
 <button data-page="quality">Data Quality</button>
 <button data-page="audit">Audit Log</button>
@@ -117,6 +125,7 @@
 <div class="card panel"><h3>Students requiring attention</h3><div id="attention"></div></div>
 <div class="card panel"><h3>Activity</h3><div id="activity"></div></div>
 </div>
+<div class="card panel" style="margin-top:16px"><h3>Operational Pipeline</h3><div class="kpis" id="operationsKpis"></div></div>
 <div class="card panel" style="margin-top:16px">
 <div class="head" style="margin-bottom:10px"><div><h3>Certificate Verification Schedule</h3><p>10-minute in-person verification appointments and completed verification records.</p></div><button class="btn alt" onclick="openCertificateVerificationSettings()">Configure Availability</button></div>
 <div id="certificateVerificationDashboard"></div>
@@ -206,6 +215,53 @@
 <div id="materialsTable"></div>
 </section>
 
+<section class="page" id="academiccalendar">
+<div class="head"><div><h1>Calendar & Timetable</h1><p>One operational calendar for exams, assignments, sessions, certificate verification and programme events.</p></div><button class="btn alt" onclick="renderAcademicCalendar()">Refresh Calendar</button></div>
+<div class="kpis" id="calendarKpis"></div>
+<div class="filters"><select id="calendarProgramme"><option value="">All programmes</option></select><select id="calendarType"><option value="">All event types</option><option>Exam</option><option>Assignment</option><option>Session</option><option>Certificate Verification</option><option>Event</option></select></div>
+<div id="academicCalendarTable"></div>
+</section>
+
+<section class="page" id="classes">
+<div class="head"><div><h1>Classes & Attendance</h1><p>Class rosters, Zoom/live-session links and session-by-session attendance.</p></div><button class="btn primary" onclick="openAddLiveClass()">+ Add live class</button></div>
+<div class="kpis" id="classKpis"></div>
+<div id="classesTable"></div>
+</section>
+
+<section class="page" id="assignments">
+<div class="head"><div><h1>Assignments</h1><p>Release dates, due dates, submissions and marking for assignment/project/presentation components.</p></div><button class="btn primary" onclick="openAddAssignment()">+ Add assignment</button></div>
+<div class="kpis" id="assignmentKpis"></div>
+<div id="assignmentsTable"></div>
+</section>
+
+<section class="page" id="gradebook">
+<div class="head"><div><h1>Grade Book</h1><p>Generic assessment results for exams, assignments, presentations and mixed-weight components.</p></div></div>
+<div class="filters"><select id="gradeProgramme"><option value="">All programmes</option></select><select id="gradeIntake"><option value="">All intakes</option></select></div>
+<div class="kpis" id="gradeKpis"></div>
+<div id="gradebookTable"></div>
+</section>
+
+<section class="page" id="surveys">
+<div class="head"><div><h1>Surveys & Feedback</h1><p>Create programme, session and event feedback surveys and review responses.</p></div><button class="btn primary" onclick="openAddSurvey()">+ Add survey</button></div>
+<div class="kpis" id="surveyKpis"></div>
+<div id="surveysTable"></div>
+</section>
+
+<section class="page" id="automation">
+<div class="head"><div><h1>Workflow Automation</h1><p>Rules that reduce repeated manual follow-up across admissions, registration, learning and completion.</p></div><button class="btn primary" onclick="runAutomationScan()">Run Automation Scan</button></div>
+<div class="notice">Demo rules run locally. In production these would run server-side on events or schedules.</div>
+<div class="kpis" id="automationKpis"></div>
+<div id="automationTable"></div>
+<div class="head" style="margin-top:24px"><div><h2>Automation Activity</h2></div></div>
+<div id="automationLogTable"></div>
+</section>
+
+<section class="page" id="integrations">
+<div class="head"><div><h1>Integrations</h1><p>External services the production system can connect to without rebuilding their specialised functions.</p></div></div>
+<div class="notice">These are integration-ready settings in the static demo. No real third-party credentials or confidential data are stored here.</div>
+<div id="integrationsTable"></div>
+</section>
+
 <section class="page" id="completion">
 <div class="head"><div><h1>STAX & Completion</h1><p>Programme completion requires both modules and STAX.</p></div></div>
 <div id="completionTable"></div>
@@ -227,8 +283,11 @@
 </section>
 
 <section class="page" id="communications">
-<div class="head"><div><h1>Communications</h1><p>One history of student-facing operational messages.</p></div><button class="btn primary" onclick="addCommunication()">+ Log demo email</button></div>
+<div class="head"><div><h1>Communications & Campaigns</h1><p>Individual messages, reusable templates and bulk/scheduled campaign records.</p></div><div class="filters"><button class="btn primary" onclick="addCommunication()">+ Log message</button><button class="btn alt" onclick="openAddCommunicationTemplate()">+ Template</button><button class="btn alt" onclick="openAddCampaign()">+ Campaign</button></div></div>
+<div class="kpis" id="communicationKpis"></div>
 <div id="communicationsTable"></div>
+<div class="head" style="margin-top:24px"><div><h2>Templates</h2></div></div><div id="communicationTemplatesTable"></div>
+<div class="head" style="margin-top:24px"><div><h2>Campaigns</h2></div></div><div id="campaignsTable"></div>
 </section>
 
 <section class="page" id="teachout">
@@ -604,7 +663,10 @@ function setPortalMode(loggedIn=false,active='overview'){
  portalNavButton('messages','Messages','renderPortalMessages()',active)+
  portalNavButton('receipts','Receipts','renderPortalReceipts()',active)+
  portalNavButton('verification','Certificate Verification','renderPortalCertificateVerification()',active,certCount)+
+ portalNavButton('classes','Classes & Attendance','renderPortalClasses()',active)+
+ portalNavButton('assignments','Assignments','renderPortalAssignments()',active)+
  portalNavButton('materials','Learning Materials','renderPortalMaterials()',active)+
+ portalNavButton('surveys','Surveys','renderPortalSurveys()',active)+
  portalNavButton('documents','My Documents','renderProfileDocumentLibrary()',active)+
  portalNavButton('student','Student Access','renderPortalStudentAccess()',active)+
  portalNavButton('account','Account','renderPortalAccount()',active)+
