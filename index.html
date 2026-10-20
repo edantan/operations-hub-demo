@@ -1277,6 +1277,11 @@ function renderPortalDocumentRequests(){
  portalPage('documentshub','Document Requests','See every document staff has asked you to provide or resubmit, including completed requests.',rows||'<div class="portal-empty">No document requests.</div>')
 }
 function receiptForRegistration(regId){return data.receipts.find(x=>x.registrationId===regId)}
+function userRegistrationLabel(r){const intake=windowById(r?.intakeId),programme=programmeName(r?.programmeId);return intake?.label?intake.label+' Registration':programme+' Registration'}
+function paymentNeedsUserAction(r){return !!r&&r.status!=='Draft'&&r.status!=='Cancelled'&&!isPaymentApproved(r)&&!r.paymentEvidenceDocumentId}
+function paymentAwaitingVerification(r){return !!r&&r.status!=='Draft'&&r.status!=='Cancelled'&&!isPaymentApproved(r)&&!!r.paymentEvidenceDocumentId}
+function portalCommunicationText(c){let subject=String(c?.subject||''),body=String(c?.body||''),r=c?.registrationId?registrationById(c.registrationId):null;if(r){const label=userRegistrationLabel(r);subject=subject.replaceAll(r.id,label);body=body.replaceAll(r.id,label)}return {subject,body}}
+
 function existingTaxInvoiceForRegistration(regId){return data.invoiceRequests.find(x=>x.registrationId===regId&&!['Cancelled'].includes(x.status))}
 function taxInvoiceNumber(){
  const year=new Date().getFullYear(),nums=data.invoiceRequests.map(x=>Number(String(x.invoiceNo||'').match(/(\d+)$/)?.[1]||0));
