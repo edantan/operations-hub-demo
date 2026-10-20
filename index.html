@@ -592,8 +592,10 @@ data.integrations=data.integrations||[
  {id:'INT-XERO',name:'Xero',category:'Finance',status:'Planned',purpose:'Invoices, receipts and payment reconciliation'},
  {id:'INT-WHATSAPP',name:'WhatsApp',category:'Communications',status:'Optional',purpose:'Operational reminders and notifications'},
  {id:'INT-GMEET',name:'Google Meet',category:'Live Classroom',status:'Optional',purpose:'Alternative live-session provider'},
- {id:'INT-TEAMS',name:'Microsoft Teams',category:'Live Classroom',status:'Optional',purpose:'Alternative live-session provider'}
+ {id:'INT-TEAMS',name:'Microsoft Teams',category:'Live Classroom',status:'Optional',purpose:'Alternative live-session provider'},
+ {id:'INT-ONEMAP',name:'OneMap Address Lookup',category:'Address Data',status:'Backend Required',purpose:'Suggest Singapore addresses from postal codes while preserving manual-entry fallback'}
 ];
+if(!data.integrations.some(i=>i.id==='INT-ONEMAP'))data.integrations.push({id:'INT-ONEMAP',name:'OneMap Address Lookup',category:'Address Data',status:'Backend Required',purpose:'Suggest Singapore addresses from postal codes while preserving manual-entry fallback'});
 data.certificateVerificationAppointments=data.certificateVerificationAppointments||[];
 data.certificateVerificationSettings=data.certificateVerificationSettings||{startTime:'10:00',endTime:'17:00',slotMinutes:10,lunchBlock:'12:00-13:00',unavailableDates:[],officeLabel:'CGI Singapore Office'};
 data.certificateVerificationSettings.startTime=data.certificateVerificationSettings.startTime||'10:00';
