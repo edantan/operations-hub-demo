@@ -1943,7 +1943,7 @@ function paymentExpectedAmount(r){const f=r.feeSnapshot||calculateRegistrationFe
 function paymentDifferenceAmount(r){const expected=paymentExpectedAmount(r);return expected==null||r.paymentConfirmedAmount==null?null:Math.round((Number(r.paymentConfirmedAmount)-expected)*100)/100}
 function paymentHasShortfall(r){const d=paymentDifferenceAmount(r);return d!=null&&d<-.009}
 function paymentHasOverpayment(r){const d=paymentDifferenceAmount(r);return d!=null&&d>.009}
-function isPaymentApproved(r){return ['Verified','Verified — Shortfall Approved','Verified — Overpayment'].includes(r.paymentStatus)}
+function isPaymentApproved(r){if(!r)return false;const status=String(r.paymentStatus||'').trim();return ['Paid','Completed','Verified','Verified — Shortfall Approved','Verified — Overpayment'].includes(status)||!!receiptForRegistration(r.id)}
 function paymentDifferenceLabel(r){const d=paymentDifferenceAmount(r),f=r.feeSnapshot||calculateRegistrationFees(r);if(d==null)return '';if(Math.abs(d)<.009)return 'Matched';return d<0?'Shortfall '+money(Math.abs(d),f.currency):'Overpayment '+money(d,f.currency)}
 function paymentProofDocument(r){return r.paymentEvidenceDocumentId?data.documents.find(d=>d.id===r.paymentEvidenceDocumentId):null}
 function openPaymentReconciliationQueue(){
