@@ -138,7 +138,8 @@
 </section>
 
 <section class="page" id="students">
-<div class="head"><div><h1>Students / CRM</h1><p>Open a student to review programme progress, exemptions, complete attempt history, results and linked operational records.</p></div><button class="btn primary" onclick="addProspect()">+ Add person / student</button></div>
+<div class="head"><div><h1>Students / CRM</h1><p>Open a student to review the complete master record, personal/employment data, academic history, exemptions, results and operational records.</p></div><div class="filters"><button class="btn primary" onclick="addProspect()">+ Add person / student</button><button class="btn alt" onclick="go('reports');setTimeout(()=>document.getElementById('studentMasterReport')?.scrollIntoView({behavior:'smooth'}),50)">View Demo Master Report</button></div></div>
+<div class="notice"><b>DEMO.xlsx sample loaded:</b> <span id="studentDemoCount">28</span> student records. Click <b>Open Full Master Record</b> on any student to view the complete imported profile and academic row.</div>
 <div class="notice"><b>Backend result convention:</b> a result of <b>1</b> means the module has been attempted or registered but is still outstanding. A blank module/date means it has never been attempted. Open a student record to view the full CLAW / CCA / CG / BDY / IFAI / DOS / RM / STAX paired backend layout.</div>
 <div class="filters"><input id="studentSearch" placeholder="Search student"><select id="studentStatus"><option value="">All statuses</option><option>Active</option><option>Inactive</option><option>Completed</option><option>Prospect</option></select></div>
 <div id="studentsTable"></div>
@@ -308,7 +309,21 @@
 </section>
 
 <section class="page" id="reports">
-<div class="head"><div><h1>Reports</h1><p>Filter the registration register by programme, intake and student/entry type, review the complete submitted information and download the filtered report.</p></div><button class="btn primary" onclick="downloadRegistrationReport()">Download Registration Report</button></div>
+<div class="head"><div><h1>Reports</h1><p>Student master data, programme progress and registration reporting.</p></div></div>
+
+<div id="studentMasterReport" class="master-section">
+<div class="head"><div><h2>Student Master Data Report</h2><p>The 28 DEMO.xlsx student records, including the dummy contact/profile information and the original academic master-data values.</p></div><button class="btn primary" onclick="downloadStudentMasterReport()">Download Student Master Data</button></div>
+<div class="filters">
+<input id="masterReportSearch" placeholder="Search name, student no, email or company" oninput="renderStudentMasterReport()">
+<select id="masterReportStatus" onchange="renderStudentMasterReport()"><option value="">All statuses</option><option>Active</option><option>Inactive</option><option>Completed</option></select>
+<select id="masterReportBalance" onchange="renderStudentMasterReport()"><option value="">All balance subjects</option><option value="0">0 balance</option><option value="1">1 balance</option><option value="2">2 balance</option><option value="3">3 balance</option><option value="4">4 balance</option><option value="5">5 balance</option><option value="6">6 balance</option><option value="7">7 balance</option><option value="8">8 balance</option></select>
+</div>
+<div class="kpis" id="studentMasterReportKpis"></div>
+<div class="notice">Academic blanks are preserved because a blank module/date means the module has never been attempted. Dummy information is used only for non-academic fields that were blank in the sample workbook.</div>
+<div id="studentMasterReportTable"></div>
+</div>
+
+<div class="head" style="margin-top:30px"><div><h2>Registration Report</h2><p>Filter submitted registrations by programme, intake, student/entry type and payment status.</p></div><button class="btn primary" onclick="downloadRegistrationReport()">Download Registration Report</button></div>
 <div class="filters">
 <select id="reportProgramme" onchange="renderRegistrationReport()"><option value="">All programmes</option></select>
 <select id="reportIntake" onchange="renderRegistrationReport()"><option value="">All intakes</option></select>
@@ -1442,7 +1457,7 @@ function renderStudents(){
  let rows=data.students.filter(s=>(!q||(s.name+s.id+s.email).toLowerCase().includes(q))&&(!st||s.status===st));
  document.getElementById('studentsTable').innerHTML=table(['Student','Status','Track','Exemptions','Attempts','Balance Subjects','STAX','Latest','Action'],rows.map(s=>{
    const ex=studentExemptionModules(s.id),attempts=studentAttemptTotal(s.id),latest=moduleHistoryForStudent(s.id).filter(h=>h.registrationType!=='Exemption').slice(-1)[0],master=masterBackendRecord(s.id);
-   return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+esc(s.name)+'</button><br><small>'+esc(s.id)+'</small></td><td>'+badge(s.status)+'</td><td>'+badge(s.track)+'</td><td><b>'+ex.length+'</b>'+(ex.length?'<br><small>'+esc(ex.join(', '))+'</small>':'')+'</td><td><b>'+attempts+'</b></td><td><b>'+master.balance+'</b></td><td>'+badge(s.stax)+'</td><td>'+(latest?esc(latest.module+' • '+masterDateToken(latest.diet)+' • '+latest.result):'—')+'</td><td><button class="btn small primary" onclick="openStudent(\''+s.id+'\')">Open backend record</button></td></tr>'
+   return '<tr><td><button class="link" onclick="openStudent(\''+s.id+'\')">'+esc(s.name)+'</button><br><small>'+esc(s.id)+'</small></td><td>'+badge(s.status)+'</td><td>'+badge(s.track)+'</td><td><b>'+ex.length+'</b>'+(ex.length?'<br><small>'+esc(ex.join(', '))+'</small>':'')+'</td><td><b>'+attempts+'</b></td><td><b>'+master.balance+'</b></td><td>'+badge(s.stax)+'</td><td>'+(latest?esc(latest.module+' • '+masterDateToken(latest.diet)+' • '+latest.result):'—')+'</td><td><button class="btn small primary" onclick="openStudent(\''+s.id+'\')">Open Full Master Record</button></td></tr>'
  }))
 }
 
@@ -2140,6 +2155,33 @@ function openExemptionDecision(id){const d=data.exemptionDecisions.find(x=>x.id=
 function qualityIssues(){let issues=[];data.students.forEach(s=>{if(!s.email)issues.push([s.id,'Missing email','High']);if(s.shelf==='Expired')issues.push([s.id,'Shelf life expired','High']);if(s.remaining===0&&s.stax!=='Completed')issues.push([s.id,'Only STAX outstanding','Medium'])});data.exams.forEach(e=>{if(e.payment==='Pending')issues.push([e.student,e.module+' payment pending','High']);if(e.examena==='Not Ready')issues.push([e.student,e.module+' Examena not ready','Medium'])});data.tasks.filter(t=>t.status==='Overdue').forEach(t=>issues.push([t.student,t.task+' overdue','High']));return issues}
 function renderQuality(){let issues=qualityIssues();document.getElementById('qualityTable').innerHTML=table(['Student','Issue','Severity'],issues.map(i=>'<tr><td><button class="link" onclick="openStudent(\''+i[0]+'\')">'+nameOf(i[0])+'</button><br><small>'+i[0]+'</small></td><td>'+i[1]+'</td><td>'+badge(i[2])+'</td></tr>'))}
 function renderAudit(){document.getElementById('auditTable').innerHTML=table(['Time','Area','Change'],data.audit.map(a=>'<tr><td>'+a.time+'</td><td>'+badge(a.action)+'</td><td>'+a.detail+'</td></tr>'))}
+
+function studentMasterReportData(){
+ const q=(document.getElementById('masterReportSearch')?.value||'').toLowerCase().trim(),status=document.getElementById('masterReportStatus')?.value||'',balance=document.getElementById('masterReportBalance')?.value??'';
+ return data.students.filter(s=>importedMasterRow(s.id)).filter(s=>{
+   const p=personalProfile(s.id),raw=importedMasterRow(s.id),academic=masterSourceAcademicRecord(s.id);
+   const hay=[s.name,s.id,raw?.studentNo,s.email,s.phone,p.employerName,p.designation,academic['Balance Subjects']].join(' ').toLowerCase();
+   return (!q||hay.includes(q))&&(!status||s.status===status)&&(balance===''||String(academic['Total Balance Subjects'])===String(balance))
+ })
+}
+function studentMasterReportRecord(s){
+ const contact=masterContactRecord(s.id),academic=masterSourceAcademicRecord(s.id),plan=actionPlanRecord(s.id);
+ return {'Record ID':s.id,...contact,...academic,'Status':s.status,'Track':s.track,'Risk':s.risk,'Shelf-life Status':s.shelf,...plan}
+}
+function renderStudentMasterReport(){
+ const box=document.getElementById('studentMasterReportTable');if(!box)return;const students=studentMasterReportData(),records=students.map(studentMasterReportRecord);
+ const active=students.filter(s=>s.status==='Active').length,inactive=students.filter(s=>s.status==='Inactive').length,fast=students.filter(s=>Number(masterSourceAcademicRecord(s.id)['No of EX'])===5).length;
+ document.getElementById('studentDemoCount')&&(document.getElementById('studentDemoCount').textContent=importedMasterRows.length);
+ document.getElementById('studentMasterReportKpis').innerHTML=[['Demo students',students.length],['Active',active],['Inactive',inactive],['Fast-track',fast],['Total source records',importedMasterRows.length]].map(x=>'<div class="card kpi"><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+ const cols=['Student No (Avepoint)','Full Name','Personal Email','Mobile No','Company Name','Designation','1st Intake','Latest intake','Total Balance Subjects','No of EX','Balance Subjects','Exempted Subjects','Status'];
+ const rows=records.map((r,i)=>'<tr>'+cols.map(col=>'<td>'+esc(r[col]??'')+'</td>').join('')+'<td><button class="btn small primary" onclick="openStudent(\''+students[i].id+'\')">Open Full Record</button></td></tr>');
+ box.innerHTML=table([...cols,'Action'],rows)
+}
+function downloadStudentMasterReport(){
+ const students=studentMasterReportData();if(!students.length)return alert('There are no student master records matching the selected filters.');
+ const records=students.map(studentMasterReportRecord),headers=[...new Set(records.flatMap(r=>Object.keys(r)))],csv=[headers.map(csvCell).join(','),...records.map(r=>headers.map(h=>csvCell(r[h]??'')).join(','))].join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a'),date=new Date().toISOString().slice(0,10);
+ a.href=url;a.download='student-master-data-'+date+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);logAction('Report','Student master data downloaded with '+records.length+' record(s)');save()
+}
 function registrationReportData(){
  const programme=document.getElementById('reportProgramme')?.value||'',intakeId=document.getElementById('reportIntake')?.value||'',studentType=document.getElementById('reportStudentType')?.value||'',entryType=document.getElementById('reportEntryType')?.value||'',regStatus=document.getElementById('reportRegStatus')?.value||'',paymentStatus=document.getElementById('reportPaymentStatus')?.value||'';
  return data.registrations.filter(r=>r.status!=='Draft').filter(r=>(!programme||r.programmeId===programme)&&(!intakeId||r.intakeId===intakeId)&&(!studentType||r.source===studentType)&&(!entryType||registrationEntryTypes(r).includes(entryType))&&(!regStatus||r.status===regStatus)&&(!paymentStatus||r.paymentStatus===paymentStatus))
@@ -2179,7 +2221,7 @@ async function resetDemo(){
 }
 function safeRender(name,fn){try{fn()}catch(e){console.error('Render failed:',name,e);const box=document.getElementById('auditTable');if(box&&name!=='Audit')box.dataset.renderError=(box.dataset.renderError||'')+' '+name}}
 function renderAll(){[
- ['Dashboard',renderDashboard],['Workflow',renderWorkflow],['Programmes',renderProgrammes],['Intakes',renderRegistrationWindows],['Intake Registrations',renderIntakeRegistrationOverview],['Session Offerings',renderComponentOfferings],['Students',renderStudents],['Student Links',renderStudentLinks],['Enquiries',renderEnquiries],['Eligibility',renderEligibilityDocs],['Document Requests',renderDocumentRequestsAdmin],['Registrations',renderRegistrationsAdmin],['Exams',renderExams],['Payments',renderPayments],['Calendar',renderAcademicCalendar],['Classes',renderClasses],['Assignments',renderAssignments],['Grade Book',renderGradeBook],['Materials',renderMaterials],['Completion',renderCompletion],['Certificates',renderCertificates],['Cases',renderCases],['Tasks',renderTasks],['Communications',renderCommunications],['Surveys',renderSurveys],['Automation',renderAutomation],['Integrations',renderIntegrations],['Teach-out',renderTeachout],['Data Quality',renderQuality],['Audit',renderAudit],['Registration Report',renderRegistrationReport]
+ ['Dashboard',renderDashboard],['Workflow',renderWorkflow],['Programmes',renderProgrammes],['Intakes',renderRegistrationWindows],['Intake Registrations',renderIntakeRegistrationOverview],['Session Offerings',renderComponentOfferings],['Students',renderStudents],['Student Links',renderStudentLinks],['Enquiries',renderEnquiries],['Eligibility',renderEligibilityDocs],['Document Requests',renderDocumentRequestsAdmin],['Registrations',renderRegistrationsAdmin],['Exams',renderExams],['Payments',renderPayments],['Calendar',renderAcademicCalendar],['Classes',renderClasses],['Assignments',renderAssignments],['Grade Book',renderGradeBook],['Materials',renderMaterials],['Completion',renderCompletion],['Certificates',renderCertificates],['Cases',renderCases],['Tasks',renderTasks],['Communications',renderCommunications],['Surveys',renderSurveys],['Automation',renderAutomation],['Integrations',renderIntegrations],['Teach-out',renderTeachout],['Data Quality',renderQuality],['Audit',renderAudit],['Student Master Report',renderStudentMasterReport],['Registration Report',renderRegistrationReport]
  ].forEach(([name,fn])=>safeRender(name,fn))}
 document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('eligibilitySearch').oninput=renderEligibilityDocs;document.getElementById('eligibilityFilter').onchange=renderEligibilityDocs;document.getElementById('eligibilityDocFilter').onchange=renderEligibilityDocs;document.getElementById('documentRequestSearch').oninput=renderDocumentRequestsAdmin;document.getElementById('documentRequestStatus').onchange=renderDocumentRequestsAdmin;document.getElementById('documentRequestType').onchange=renderDocumentRequestsAdmin;document.getElementById('registrationSearch').oninput=renderRegistrationsAdmin;document.getElementById('registrationIntakeFilter').onchange=renderRegistrationsAdmin;document.getElementById('registrationStatusFilter').onchange=renderRegistrationsAdmin;document.getElementById('calendarProgramme').onchange=renderAcademicCalendar;document.getElementById('calendarType').onchange=renderAcademicCalendar;document.getElementById('gradeProgramme').onchange=renderGradeBook;document.getElementById('gradeIntake').onchange=renderGradeBook;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>(x.name+x.id).toLowerCase().includes(q));if(s)openStudent(s.id)};try{renderAuth('register')}catch(e){console.error('Public portal startup failed',e);document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Portal recovery</h2><p>The saved demo data needs a compatibility refresh.</p></div></div><div class="auth-note">Use the button below to refresh the demo data structure. Applicant accounts are kept unless you choose the full Reset Demo option from staff.</div><button class="btn primary" onclick="repairDemoCompatibility()">Repair demo compatibility</button>'}renderAll();
 </script>
