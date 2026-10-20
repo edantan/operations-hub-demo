@@ -116,10 +116,11 @@
 </nav>
 </aside>
 <main class="main">
-<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search fake student by name or ID"><button class="btn small alt" onclick="showPortal()">Public portal</button><span class="tag">DEMO MODE</span></header>
+<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search demo student by name, ID or student no."><button class="btn small alt" onclick="showPortal()">Public portal</button><span class="tag">COUNCIL DEMO • 28 STUDENTS</span></header>
 <div class="content">
 <section class="page active" id="dashboard">
-<div class="head"><div><h1>Operations Dashboard</h1><p>Live view of the fake operational records.</p></div><button class="btn alt" onclick="resetDemo()">Reset demo data</button></div>
+<div class="head"><div><h1>Operations Dashboard</h1><p>Council presentation dataset based on the 28 DEMO.xlsx master-data records, with linked operational workflows.</p></div><button class="btn alt" onclick="resetDemo()">Reset Council Demo</button></div>
+<div class="notice"><b>Presentation dataset loaded:</b> 28 student master records. Student Records and the Student Master Data Report use the same source dataset.</div>
 <div class="kpis" id="kpis"></div>
 <div class="grid2">
 <div class="card panel"><h3>Students requiring attention</h3><div id="attention"></div></div>
@@ -361,18 +362,8 @@
 </div>
 <script>
 const seed={
-students:[
-{id:'DEMO-001',name:'Alice Demo',email:'alice.demo@example.test',phone:'+65 9000 0001',status:'Active',track:'Fast-track',remaining:3,exemptions:5,stax:'Not Started',risk:'Normal',shelf:'Valid',intake:'Nov 2025',latest:'Nov 2026',certificate:'Not Ready'},
-{id:'DEMO-002',name:'Ben Demo',email:'ben.demo@example.test',phone:'+65 9000 0002',status:'Active',track:'Full',remaining:1,exemptions:0,stax:'Completed',risk:'Normal',shelf:'Valid',intake:'Jun 2024',latest:'Nov 2026',certificate:'Not Ready'},
-{id:'DEMO-003',name:'Chloe Demo',email:'chloe.demo@example.test',phone:'+65 9000 0003',status:'Active',track:'Full',remaining:4,exemptions:0,stax:'Not Started',risk:'High',shelf:'Valid',intake:'Nov 2024',latest:'Nov 2026',certificate:'Not Ready'},
-{id:'DEMO-004',name:'Darren Demo',email:'darren.demo@example.test',phone:'+65 9000 0004',status:'Active',track:'Full',remaining:0,exemptions:0,stax:'Not Started',risk:'Medium',shelf:'Valid',intake:'Jun 2023',latest:'Nov 2025',certificate:'Not Ready'},
-{id:'DEMO-005',name:'Eva Demo',email:'eva.demo@example.test',phone:'+65 9000 0005',status:'Inactive',track:'Full',remaining:5,exemptions:0,stax:'Not Started',risk:'High',shelf:'Expired',intake:'Nov 2022',latest:'Nov 2023',certificate:'Not Ready'},
-{id:'DEMO-006',name:'Farah Demo',email:'farah.demo@example.test',phone:'+65 9000 0006',status:'Completed',track:'Full',remaining:0,exemptions:0,stax:'Completed',risk:'Normal',shelf:'Completed',intake:'Jun 2022',latest:'Jun 2025',certificate:'Pending'}],
-exams:[
-{id:'EX-001',student:'DEMO-001',module:'CLAW',diet:'Nov 2026',registration:'Full',payment:'Paid',examena:'Ready',result:'Pending'},
-{id:'EX-002',student:'DEMO-002',module:'RM',diet:'Nov 2026',registration:'Resit',payment:'Paid',examena:'Ready',result:'Pending'},
-{id:'EX-003',student:'DEMO-003',module:'CG',diet:'Nov 2026',registration:'Full',payment:'Pending',examena:'Not Ready',result:'Pending'},
-{id:'EX-004',student:'DEMO-003',module:'CCA',diet:'Nov 2026',registration:'Deferment',payment:'Waived',examena:'Not Required',result:'Deferred'}],
+students:[],
+exams:[],
 cases:[
 {id:'CASE-001',student:'DEMO-003',type:'Examena readiness',priority:'High',status:'In Progress',owner:'Exam Team'},
 {id:'CASE-002',student:'DEMO-004',type:'STAX completion',priority:'Medium',status:'Waiting for Student',owner:'Students Team'},
@@ -397,6 +388,14 @@ audit:[
 {time:'Demo start',action:'System',detail:'Fake dataset loaded'}],
 activity:[['Exam','DEMO-003 payment requires action'],['Case','STAX follow-up opened for DEMO-004'],['Task','Inactive student review is overdue']]
 };
+const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V4';
+try{
+ if(localStorage.getItem('operationsHubCouncilBuild')!==COUNCIL_DEMO_BUILD){
+   localStorage.removeItem('operationsHubDemoV2');
+   localStorage.removeItem('operationsHubPortalAccountsV2');
+   localStorage.setItem('operationsHubCouncilBuild',COUNCIL_DEMO_BUILD);
+ }
+}catch(e){}
 const clone=()=>JSON.parse(JSON.stringify(seed));let data;try{data=JSON.parse(localStorage.getItem('operationsHubDemoV2'))||clone()}catch(e){data=clone()}
 data.enquiries=data.enquiries||[];data.materials=data.materials||[];data.communications=data.communications||[];data.audit=data.audit||[];
 data.materialResources=data.materialResources||[
@@ -509,7 +508,7 @@ importedMasterRows.forEach((r,idx)=>{
  const outstandingExam=String(r.balanceSubjects||'').split(',').map(x=>x.trim()).filter(x=>x&&x!=='STAX').length,bestDiets=Math.ceil(outstandingExam/2),bestExam=total===0?'Completed':expired?'Review required':outstandingExam===0?'Already complete':outstandingExam<=2?'Jun 2027':outstandingExam<=4?'Nov 2027':'Jun 2028',expectedExam=total===0?'Completed':expired?'Review required':outstandingExam===0?'Already complete':outstandingExam<=1?'Jun 2027':outstandingExam<=3?'Nov 2027':'Jun 2028',bestProgramme=total===0?'Completed':expired?'Review required':staxDone?bestExam:(bestExam==='Jun 2027'?'Aug/Sep 2027':bestExam==='Nov 2027'?'Mar/Apr 2028':'Aug/Sep 2028'),expectedProgramme=total===0?'Completed':expired?'Review required':staxDone?expectedExam:(expectedExam==='Jun 2027'?'Aug/Sep 2027':expectedExam==='Nov 2027'?'Mar/Apr 2028':'Aug/Sep 2028');
  Object.assign(m,{sourceRow:String(idx+2),serialNo:r.studentNo,shelfDue:r.shelfDue,shelfMonthsRemaining:String(r.shelfMonths??''),dataFlags:expired?'Shelf life expired in source master':'Demo record populated from uploaded master sample',bestExamCompletion:bestExam,bestProgrammeCompletion:bestProgramme,expectedExamCompletion:expectedExam,expectedProgrammeCompletion:expectedProgramme,bestDietsRequired:String(bestDiets),expectedDietsRequired:String(total===0?0:Math.max(bestDiets,bestDiets+1))});
 });
-if(data.masterImportVersion!=='DEMO-XLSX-20261020-V1'){
+if(data.masterImportVersion!=='DEMO-XLSX-20261020-V2'){
  data.exams=(data.exams||[]).filter(e=>!importedStudentIds.has(e.student));
  data.moduleHistory=(data.moduleHistory||[]).filter(h=>!importedStudentIds.has(h.student));
  data.exemptionDecisions=(data.exemptionDecisions||[]).filter(d=>!importedStudentIds.has(d.student));
@@ -528,7 +527,7 @@ if(data.masterImportVersion!=='DEMO-XLSX-20261020-V1'){
    });
    if(exempt.length)data.exemptionDecisions.push({id:'MASTER-EX-'+r.internalId,student:r.internalId,applicationId:'',programmeId:'PROG-CGQP',qualification:(r.education||'Demo qualification')+(r.university?' — '+r.university:''),modules:exempt,status:'Approved',decisionDate:r.firstIntake||'Imported',reviewer:'Imported Master Data',notes:'Imported from DEMO.xlsx sample master data.'});
  });
- data.masterImportVersion='DEMO-XLSX-20261020-V1';
+ data.masterImportVersion='DEMO-XLSX-20261020-V2';
  try{localStorage.setItem('operationsHubDemoV2',JSON.stringify(data))}catch(e){}
 }
 data.surveys=data.surveys||[
@@ -1301,7 +1300,7 @@ function renderWorkflow(){let steps=[['1. Account / Enquiry','Create a person re
 
 function importedMasterRow(studentId){return (data.importedMasterRows||[]).find(r=>r.internalId===studentId)||null}
 function studentMasterMeta(studentId){let m=data.studentMasterMeta.find(x=>x.student===studentId);if(!m){m={student:studentId,sourceRow:'',serialNo:'',shelfDue:'',shelfMonthsRemaining:'',dataFlags:'',bestExamCompletion:'',bestProgrammeCompletion:'',expectedExamCompletion:'',expectedProgrammeCompletion:'',bestDietsRequired:'',expectedDietsRequired:''};data.studentMasterMeta.push(m)}return m}
-function masterFieldHtml(label,value){const v=value===0?'0':(value||'—');return '<div class="master-field"><span>'+esc(label)+'</span><b>'+esc(v)+'</b></div>'}
+function masterFieldHtml(label,value){const v=value===0?'0':(value===null||value===undefined||String(value).trim()===''?'Not Applicable':value);return '<div class="master-field"><span>'+esc(label)+'</span><b>'+esc(v)+'</b></div>'}
 function masterContactRecord(studentId){
  const s=student(studentId)||{},p=personalProfile(studentId),m=studentMasterMeta(studentId),sponsor=data.registrations.filter(r=>r.student===studentId&&r.companySponsored==='Yes').slice(-1)[0]?.sponsor||{};
  return {
@@ -2128,7 +2127,7 @@ function openStudent(id){
  const historyRows=hist.map(h=>'<tr><td><b>'+esc(h.module)+'</b></td><td>'+esc(masterDateToken(h.diet)||'—')+'</td><td>'+(h.registrationType==='Exemption'||String(h.result).toUpperCase()==='EX'?'—':'#'+Number(h.attemptNo||moduleAttemptCount(id,h.module)))+'</td><td>'+badge(h.registrationType||'Full')+'</td><td>'+badge(h.result||'Pending')+'</td><td>'+(h.registrationType==='Exemption'||String(h.result).toUpperCase()==='EX'?'<button class="btn small alt" onclick="openExemptionDecision(\''+esc(h.sourceId||'')+'\')">Exemption</button>':'<button class="btn small alt" onclick="openAddModuleAttempt(\''+h.id+'\')">Open</button>')+'</td></tr>');
  const decisionHtml=decisions.length?decisions.map(d=>'<div class="requestbox"><b>'+esc(d.id)+' — '+esc(d.status)+'</b><p><b>Qualification:</b> '+esc(d.qualification||'—')+'<br><b>Modules:</b> '+esc((d.modules||[]).join(', ')||'None')+'<br><b>Decision:</b> '+esc(d.decisionDate||'—')+' • '+esc(d.reviewer||'—')+'</p><button class="btn small alt" onclick="openExemptionDecision(\''+d.id+'\')">Open decision</button></div>').join(''):'<p>No exemption decisions recorded.</p>';
  const regHtml=regs.length?regs.map(r=>'<div class="kv"><span>'+esc(r.id)+' • '+esc(windowById(r.intakeId)?.label||'')+'</span><b><button class="link" onclick="openRegistrationAdmin(\''+r.id+'\')">'+esc(r.status)+' / '+esc(r.paymentStatus||'')+'</button></b></div>').join(''):'<p>No registration records.</p>';
- drawer.innerHTML='<button class="close" onclick="closeDrawer()">✕</button><div class="master-actions"><div><h2 style="margin:0">'+esc(profile.fullName||s.name)+'</h2><p style="margin:4px 0 8px">'+esc(s.id)+' • '+esc(s.email||'')+' • '+esc(s.phone||'No phone')+'</p></div><div class="filters" style="margin-bottom:0"><button class="btn small primary" onclick="openAddModuleAttempt(\'\',\''+s.id+'\')">+ Add result / attempt</button><button class="btn small primary" onclick="openAddExemption(\''+s.id+'\')">+ Add exemption</button><button class="btn small alt" onclick="openAdminEditPersonalProfile(\''+s.id+'\')">Edit profile</button><button class="btn small alt" onclick="openEditMasterData(\''+s.id+'\')">Edit master fields</button><button class="btn small alt" onclick="addCase(\''+s.id+'\')">+ Case</button><button class="btn small alt" onclick="addCommunication(\''+s.id+'\')">+ Message</button></div></div>'+
+ drawer.innerHTML='<button class="close" onclick="closeDrawer()">✕</button><div class="master-actions"><div><h2 style="margin:0">'+esc(profile.fullName||s.name)+'</h2><p style="margin:4px 0 4px"><b>Student No: '+esc(importedMasterRow(id)?.studentNo||s.masterStudentNo||s.id)+'</b> • '+esc(s.email||'')+' • '+esc(s.phone||'No phone')+'</p><p class="mini" style="margin:0 0 8px">Council Demo Master Record • Source: DEMO.xlsx</p></div><div class="filters" style="margin-bottom:0"><button class="btn small primary" onclick="openAddModuleAttempt(\'\',\''+s.id+'\')">+ Add result / attempt</button><button class="btn small primary" onclick="openAddExemption(\''+s.id+'\')">+ Add exemption</button><button class="btn small alt" onclick="openAdminEditPersonalProfile(\''+s.id+'\')">Edit profile</button><button class="btn small alt" onclick="openEditMasterData(\''+s.id+'\')">Edit master fields</button><button class="btn small alt" onclick="addCase(\''+s.id+'\')">+ Case</button><button class="btn small alt" onclick="addCommunication(\''+s.id+'\')">+ Message</button></div></div>'+
  '<div class="reviewgrid"><div class="reviewcard"><span>Total Balance Subjects</span><b>'+master.balance+'</b></div><div class="reviewcard"><span>Approved Exemptions</span><b>'+exMods.length+'</b></div><div class="reviewcard"><span>Total Exam Attempts</span><b>'+examHist.length+'</b></div></div>'+
  masterRecordSectionsHtml(id)+
  '<div class="master-section"><h3>Detailed Attempt / Result History</h3>'+(historyRows.length?table(['Module','Diet / Decision','Attempt','Type','Raw Result','Action'],historyRows):'<p>No module history.</p>')+'</div>'+
@@ -2212,10 +2211,11 @@ function report(type){let out=[];if(type==='remaining'){out.push('REMAINING MODU
 async function clearDemoFileStore(){try{const db=await openDocDB();await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){}}
 function repairDemoCompatibility(){try{const accounts=localStorage.getItem('operationsHubPortalAccountsV2');localStorage.removeItem('operationsHubDemoV2');if(accounts)localStorage.setItem('operationsHubPortalAccountsV2',accounts);location.reload()}catch(e){alert('Unable to refresh the demo data in this browser. Please use Reset Demo from the staff side.')}}
 async function resetDemo(){
- if(!confirm('Reset the demo? This will remove all accounts created through Create Account, their applications, registrations, uploaded demo files and other demo changes. Seeded demo records will be restored.'))return;
+ if(!confirm('Reset the Council demo? This will clear browser-created demo changes and restore the 28 DEMO.xlsx student master records and presentation workflows.'))return;
  await clearDemoFileStore();
  localStorage.removeItem('operationsHubPortalAccountsV2');
  localStorage.removeItem('operationsHubDemoV2');
+ localStorage.removeItem('operationsHubCouncilBuild');
  portalAccounts=[];activePortalAccount=null;
  location.reload()
 }
@@ -2223,7 +2223,7 @@ function safeRender(name,fn){try{fn()}catch(e){console.error('Render failed:',na
 function renderAll(){[
  ['Dashboard',renderDashboard],['Workflow',renderWorkflow],['Programmes',renderProgrammes],['Intakes',renderRegistrationWindows],['Intake Registrations',renderIntakeRegistrationOverview],['Session Offerings',renderComponentOfferings],['Students',renderStudents],['Student Links',renderStudentLinks],['Enquiries',renderEnquiries],['Eligibility',renderEligibilityDocs],['Document Requests',renderDocumentRequestsAdmin],['Registrations',renderRegistrationsAdmin],['Exams',renderExams],['Payments',renderPayments],['Calendar',renderAcademicCalendar],['Classes',renderClasses],['Assignments',renderAssignments],['Grade Book',renderGradeBook],['Materials',renderMaterials],['Completion',renderCompletion],['Certificates',renderCertificates],['Cases',renderCases],['Tasks',renderTasks],['Communications',renderCommunications],['Surveys',renderSurveys],['Automation',renderAutomation],['Integrations',renderIntegrations],['Teach-out',renderTeachout],['Data Quality',renderQuality],['Audit',renderAudit],['Student Master Report',renderStudentMasterReport],['Registration Report',renderRegistrationReport]
  ].forEach(([name,fn])=>safeRender(name,fn))}
-document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('eligibilitySearch').oninput=renderEligibilityDocs;document.getElementById('eligibilityFilter').onchange=renderEligibilityDocs;document.getElementById('eligibilityDocFilter').onchange=renderEligibilityDocs;document.getElementById('documentRequestSearch').oninput=renderDocumentRequestsAdmin;document.getElementById('documentRequestStatus').onchange=renderDocumentRequestsAdmin;document.getElementById('documentRequestType').onchange=renderDocumentRequestsAdmin;document.getElementById('registrationSearch').oninput=renderRegistrationsAdmin;document.getElementById('registrationIntakeFilter').onchange=renderRegistrationsAdmin;document.getElementById('registrationStatusFilter').onchange=renderRegistrationsAdmin;document.getElementById('calendarProgramme').onchange=renderAcademicCalendar;document.getElementById('calendarType').onchange=renderAcademicCalendar;document.getElementById('gradeProgramme').onchange=renderGradeBook;document.getElementById('gradeIntake').onchange=renderGradeBook;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>(x.name+x.id).toLowerCase().includes(q));if(s)openStudent(s.id)};try{renderAuth('register')}catch(e){console.error('Public portal startup failed',e);document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Portal recovery</h2><p>The saved demo data needs a compatibility refresh.</p></div></div><div class="auth-note">Use the button below to refresh the demo data structure. Applicant accounts are kept unless you choose the full Reset Demo option from staff.</div><button class="btn primary" onclick="repairDemoCompatibility()">Repair demo compatibility</button>'}renderAll();
+document.getElementById('studentSearch').oninput=renderStudents;document.getElementById('studentStatus').onchange=renderStudents;document.getElementById('eligibilitySearch').oninput=renderEligibilityDocs;document.getElementById('eligibilityFilter').onchange=renderEligibilityDocs;document.getElementById('eligibilityDocFilter').onchange=renderEligibilityDocs;document.getElementById('documentRequestSearch').oninput=renderDocumentRequestsAdmin;document.getElementById('documentRequestStatus').onchange=renderDocumentRequestsAdmin;document.getElementById('documentRequestType').onchange=renderDocumentRequestsAdmin;document.getElementById('registrationSearch').oninput=renderRegistrationsAdmin;document.getElementById('registrationIntakeFilter').onchange=renderRegistrationsAdmin;document.getElementById('registrationStatusFilter').onchange=renderRegistrationsAdmin;document.getElementById('calendarProgramme').onchange=renderAcademicCalendar;document.getElementById('calendarType').onchange=renderAcademicCalendar;document.getElementById('gradeProgramme').onchange=renderGradeBook;document.getElementById('gradeIntake').onchange=renderGradeBook;document.getElementById('globalSearch').oninput=e=>{let q=e.target.value.toLowerCase().trim();if(q.length<2)return;let s=data.students.find(x=>{const raw=importedMasterRow(x.id);return [x.name,x.id,x.email,raw?.studentNo].join(' ').toLowerCase().includes(q)});if(s)openStudent(s.id)};try{renderAuth('register')}catch(e){console.error('Public portal startup failed',e);document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Portal recovery</h2><p>The saved demo data needs a compatibility refresh.</p></div></div><div class="auth-note">Use the button below to refresh the demo data structure. Applicant accounts are kept unless you choose the full Reset Demo option from staff.</div><button class="btn primary" onclick="repairDemoCompatibility()">Repair demo compatibility</button>'}renderAll();
 </script>
 </body>
 </html>
