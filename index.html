@@ -769,7 +769,57 @@ function profileDocuments(a=activePortalAccount){if(!a?.prospectId)return [];ret
 function latestProfileDoc(type,a=activePortalAccount){return profileDocuments(a).filter(d=>d.type===type).sort((x,y)=>String(y.uploadedAt||'').localeCompare(String(x.uploadedAt||'')))[0]||null}
 function appAssessmentComplete(app){return app?.eligibilityStatus==='Eligible'&&app?.reviewStage==='complete'}
 function applicationIsEditable(app){return !!app&&(app.status==='Draft'||app.submissionOpen===true)}
-function personalProfile(studentId,account=activePortalAccount){let p=data.personalProfiles.find(x=>x.student===studentId);if(!p){const s=student(studentId);p={student:studentId,salutation:'',surname:'',fullName:s?.name||account?.name||'',otherName:'',address:'',address2:'',postalHome:'',gender:'',idNumber:'',residencyStatus:'',permitExpiry:'',permitType:'',dob:'',placeOfBirth:'',nationality:'',ethnicity:'',religion:'',residesInSingapore:true,employed:'',employerName:'',employerPhone:'',employerAddress:'',officeAddress1:'',officeUnit2:'',postalOffice:'',employerCountry:'',designation:'',yearsExperience:'',jobActivity:''};data.personalProfiles.push(p)}return p}
+function personalProfile(studentId,account=activePortalAccount){
+ let p=data.personalProfiles.find(x=>x.student===studentId);
+ if(!p){const s=student(studentId);p={student:studentId,salutation:'',surname:'',fullName:s?.name||account?.name||'',otherName:'',address:'',address2:'',postalHome:'',gender:'',idNumber:'',residencyStatus:'',permitExpiry:'',permitType:'',dob:'',placeOfBirth:'',nationality:'',ethnicity:'',religion:'',residesInSingapore:true,employed:'',employerName:'',employerUen:'',employerPhone:'',employerAddress:'',officeAddress1:'',officeUnit2:'',postalOffice:'',employerCountry:'Singapore',designation:'',yearsExperience:'',jobActivity:'',sponsorProfile:{}};data.personalProfiles.push(p)}
+ const defaults={salutation:'',surname:'',fullName:'',otherName:'',address:'',address2:'',postalHome:'',gender:'',idNumber:'',residencyStatus:'',permitExpiry:'',permitType:'',dob:'',placeOfBirth:'',nationality:'',ethnicity:'',religion:'',residesInSingapore:true,employed:'',employerName:'',employerUen:'',employerPhone:'',employerAddress:'',officeAddress1:'',officeUnit2:'',postalOffice:'',employerCountry:'Singapore',designation:'',yearsExperience:'',jobActivity:''};
+ Object.entries(defaults).forEach(([k,v])=>{if(p[k]===undefined||p[k]===null)p[k]=v});
+ if(!p.sponsorProfile||typeof p.sponsorProfile!=='object')p.sponsorProfile={};
+ const sp=p.sponsorProfile,latest=data.registrations.filter(r=>r.student===studentId&&r.companySponsored==='Yes'&&r.sponsor&&Object.keys(r.sponsor).length).sort((a,b)=>String(b.submittedAt||b.confirmedAt||b.id).localeCompare(String(a.submittedAt||a.confirmedAt||a.id)))[0];
+ if(latest&&!sp.companyName&&!sp.repName)Object.assign(sp,{companyName:latest.sponsor.companyName||'',companyUen:latest.sponsor.companyUen||latest.sponsor.uen||'',repName:latest.sponsor.repName||'',repDesignation:latest.sponsor.repDesignation||'',repPhone:latest.sponsor.repPhone||'',repEmail:latest.sponsor.repEmail||'',billingPostal:latest.sponsor.billingPostal||'',billingAddress:latest.sponsor.billingAddress||'',billingUnit:latest.sponsor.billingUnit||'',reusable:true,needsReview:false,sourceRegistrationId:latest.id,lastConfirmedAt:latest.submittedAt||latest.confirmedAt||''});
+ if(sp.reusable===undefined)sp.reusable=!!(sp.companyName&&sp.repName&&sp.repEmail);
+ if(sp.needsReview===undefined)sp.needsReview=false;
+ return p
+}
+const demoPostalAddressDirectory={
+ '188425':{address:'149 Rochor Road, Fu Lu Shou Complex',unitApplicable:true},
+ '560202':{address:'202 Demo Avenue',unitApplicable:true},
+ '048620':{address:'20 Sample Street',unitApplicable:true},
+ '530303':{address:'303 Demo Crescent',unitApplicable:true},
+ '078881':{address:'30 Governance Lane',unitApplicable:true},
+ '640404':{address:'404 Demo Walk',unitApplicable:true},
+ '068812':{address:'40 Boardroom Way',unitApplicable:true},
+ '750505':{address:'505 Demo Drive',unitApplicable:true},
+ '520606':{address:'606 Demo Park',unitApplicable:true},
+ '038860':{address:'60 Completion Road',unitApplicable:true},
+ '018989':{address:'10 Example Road',unitApplicable:true}
+};
+function normalizePostalCode(v){return String(v||'').replace(/\D/g,'').slice(0,6)}
+function profileSponsorDetails(p,studentId){p=p||personalProfile(studentId);return p.sponsorProfile||{}}
+function addressLookupFieldMap(scope){
+ return {
+  profileHome:{postal:'profilePostalHome',address:'profileHomeAddress',unit:'profileHomeUnit',unitWrap:'profileHomeUnitWrap',status:'profileHomePostalStatus'},
+  profileOffice:{postal:'profilePostalOffice',address:'profileOfficeAddress',unit:'profileOfficeUnit',unitWrap:'profileOfficeUnitWrap',status:'profileOfficePostalStatus'},
+  profileSponsor:{postal:'profileSponsorPostal',address:'profileSponsorAddress',unit:'profileSponsorUnit',unitWrap:'profileSponsorUnitWrap',status:'profileSponsorPostalStatus'},
+  regHome:{postal:'rpPostalHome',address:'rpAddress',unit:'rpAddress2',unitWrap:'rpAddress2Wrap',status:'rpPostalHomeStatus'},
+  regOffice:{postal:'rpPostalOffice',address:'rpEmployerAddress',unit:'rpOfficeUnit',unitWrap:'rpOfficeUnitWrap',status:'rpPostalOfficeStatus'},
+  regSponsor:{postal:'rsBillingPostal',address:'rsBillingAddress',unit:'rsBillingUnit',unitWrap:'rsBillingUnitWrap',status:'rsBillingPostalStatus'}
+ }[scope]
+}
+function setAddressLookupStatus(cfg,msg,kind=''){const el=document.getElementById(cfg?.status);if(!el)return;el.textContent=msg;el.style.color=kind==='error'?'#a33':kind==='success'?'#186a3b':''}
+function applyAddressLookupResult(scope,record){const cfg=addressLookupFieldMap(scope);if(!cfg||!record)return;const address=document.getElementById(cfg.address),unitWrap=document.getElementById(cfg.unitWrap);if(address&&record.address)address.value=record.address;if(unitWrap)unitWrap.style.display=record.unitApplicable===false?'none':'block';setAddressLookupStatus(cfg,record.source==='proxy'?'Address suggested from postal-code lookup. Please check it before saving.':'Demo address suggestion applied. Address remains editable.','success')}
+async function lookupPostalAddress(scope){
+ const cfg=addressLookupFieldMap(scope);if(!cfg)return;const postalEl=document.getElementById(cfg.postal),postal=normalizePostalCode(postalEl?.value);if(postalEl)postalEl.value=postal;
+ if(postal.length!==6){setAddressLookupStatus(cfg,'Enter a 6-digit Singapore postal code, or type the address manually.','error');const w=document.getElementById(cfg.unitWrap);if(w)w.style.display='block';return}
+ setAddressLookupStatus(cfg,'Looking up address…');let record=null;const proxy=String(window.OPERATIONS_HUB_ADDRESS_LOOKUP_URL||'').trim();
+ if(proxy){try{const res=await fetch(proxy+(proxy.includes('?')?'&':'?')+'postal='+encodeURIComponent(postal),{headers:{Accept:'application/json'}});if(res.ok){const json=await res.json(),r=json.result||json.results?.[0]||json,addr=r.address||r.ADDRESS||r.searchVal||r.SEARCHVAL;if(addr)record={address:addr,unitApplicable:r.unitApplicable===false?false:true,source:'proxy'}}}catch(e){}}
+ if(!record&&demoPostalAddressDirectory[postal])record={...demoPostalAddressDirectory[postal],source:'demo'};
+ if(record)return applyAddressLookupResult(scope,record);
+ const w=document.getElementById(cfg.unitWrap);if(w)w.style.display='block';setAddressLookupStatus(cfg,'No exact address suggestion was found. You can still enter or correct the address and unit number manually.','')
+}
+function togglePortalProfilePermitFields(){const id=(document.getElementById('profileIdNo')?.value||'').trim(),local=/^[ST]/i.test(id);const wrap=document.getElementById('profileResidencyWrap');if(wrap)wrap.style.display=local?'block':'none';document.querySelectorAll('.profile-permit-field').forEach(x=>x.style.display=local?'none':'block')}
+function togglePortalProfileEmployment(){const employed=document.getElementById('profileEmployed')?.value,wrap=document.getElementById('profileEmploymentFields'),reuse=document.getElementById('profileSponsorReusable'),warn=document.getElementById('profileSponsorEmploymentWarning');if(wrap)wrap.style.display=employed==='Yes'?'block':'none';if(reuse)reuse.disabled=employed!=='Yes';if(warn)warn.style.display=employed==='Yes'?'none':'block'}
+function copyProfileEmployerToSponsor(){const get=id=>document.getElementById(id)?.value||'',set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};set('profileSponsorCompany',get('profileEmployer'));set('profileSponsorUen',get('profileEmployerUen'));set('profileSponsorPostal',get('profilePostalOffice'));set('profileSponsorAddress',get('profileOfficeAddress'));set('profileSponsorUnit',get('profileOfficeUnit'));const reuse=document.getElementById('profileSponsorReusable');if(reuse)reuse.checked=true}
 function registrationById(id){return data.registrations.find(x=>x.id===id)}
 function registrationFor(appId,intakeId){return data.registrations.find(x=>x.applicationId===appId&&x.intakeId===intakeId&&!['Cancelled'].includes(x.status))}
 function certificateDocsForRegistration(r){
