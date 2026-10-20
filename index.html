@@ -2111,6 +2111,129 @@ function confirmRegistrationAdmin(id){
  logAction('Registration',r.id+' confirmed and confirmation communication generated');save();renderAll();openRegistrationAdmin(id)
 }
 
+
+function defermentRequestById(id){return data.defermentRequests.find(x=>x.id===id)}
+function defermentFeeAmount(d){
+ const s=student(d.student),v=versionById(s?.programmeVersionId||'CGQP-2026');
+ return Number(v?.feeConfig?.defermentFee??109)
+}
+function defermentEligibleSittings(studentId){
+ const out=[];
+ data.moduleRegistrations.filter(m=>m.student===studentId&&!['Cancelled'].includes(m.status)).forEach(m=>{
+  const r=registrationById(m.registrationId),i=windowById(m.intakeId);
+  if(r&&!['Draft','Cancelled'].includes(r.status)&&i)out.push({module:m.componentCode,sourceDiet:i.label,intakeId:i.id})
+ });
+ const raw=importedMasterRow(studentId);
+ if(raw)Object.entries(raw.modules||{}).forEach(([module,pair])=>{
+  if(module==='STAX'||String(pair?.result)!=='1')return;
+  data.intakes.forEach(i=>{if(i.programmeId==='PROG-CGQP'&&intakeTokenMatches(i.label,pair?.attempt))out.push({module,sourceDiet:i.label,intakeId:i.id})})
+ });
+ return [...new Map(out.map(x=>[x.module+'|'+x.sourceDiet,x])).values()].sort((a,b)=>dietSortValue(b.sourceDiet)-dietSortValue(a.sourceDiet))
+}
+function futureDefermentDiets(sourceDiet){
+ return data.intakes.filter(i=>i.programmeId==='PROG-CGQP'&&dietSortValue(i.label)>dietSortValue(sourceDiet)).sort((a,b)=>dietSortValue(a.label)-dietSortValue(b.label))
+}
+function replaceCurrentMasterAttemptWithDeferred(studentId,module,sourceDiet){
+ const raw=importedMasterRow(studentId);if(!raw?.modules?.[module])return;
+ const cur=raw.modules[module],code=masterAttemptCode(sourceDiet)+'-DF',parts=String(cur.attempt||'').split('/').filter(Boolean);
+ const idx=parts.findIndex(p=>intakeTokenMatches(sourceDiet,p));
+ if(idx>=0)parts[idx]=code;else parts.push(code);
+ cur.attempt=parts.join('/');cur.result=1
+}
+function applyApprovedDeferment(d){
+ let h=data.moduleHistory.find(x=>x.sourceId==='DEFERMENT-'+d.id);
+ if(!h){
+  h={id:'HIST-DEF-'+d.id,student:d.student,module:d.module,diet:d.sourceDiet,registrationType:'Deferment',result:'Deferred',attemptNo:moduleAttemptCount(d.student,d.module)+1,sourceId:'DEFERMENT-'+d.id,notes:'Deferred to '+d.targetDiet+' — '+d.decisionReason};
+  data.moduleHistory.push(h)
+ }else Object.assign(h,{diet:d.sourceDiet,result:'Deferred',notes:'Deferred to '+d.targetDiet+' — '+d.decisionReason});
+ replaceCurrentMasterAttemptWithDeferred(d.student,d.module,d.sourceDiet);recalculateStudentProgress(d.student)
+}
+function populateDefermentFilters(){
+ const sel=document.getElementById('defermentTargetFilter');if(!sel)return;
+ const current=sel.value,targets=[...new Set(data.defermentRequests.map(d=>d.targetDiet||d.requestedTargetDiet).filter(Boolean))].sort((a,b)=>dietSortValue(a)-dietSortValue(b));
+ sel.innerHTML='<option value="">All target diets</option>'+targets.map(x=>'<option>'+esc(x)+'</option>').join('');
+ if([...sel.options].some(o=>o.value===current))sel.value=current
+}
+function renderDefermentsAdmin(){
+ populateDefermentFilters();
+ const status=document.getElementById('defermentStatusFilter')?.value||'',target=document.getElementById('defermentTargetFilter')?.value||'';
+ const list=data.defermentRequests.filter(d=>(!status||d.status===status)&&(!target||(d.targetDiet||d.requestedTargetDiet)===target));
+ const kpis=[['Requests / Overrides',list.length],['Submitted',list.filter(d=>d.status==='Submitted').length],['Approved Waived',list.filter(d=>d.status==='Approved — Fee Waived').length],['Approved Fee',list.filter(d=>d.status==='Approved — Fee Required').length],['Not Approved',list.filter(d=>d.status==='Not Approved').length]];
+ document.getElementById('defermentKpis').innerHTML=kpis.map(x=>'<div class="card kpi"><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+ const rows=list.slice().sort((a,b)=>String(b.id).localeCompare(String(a.id))).map(d=>{
+  const doc=data.documents.find(x=>x.id===d.supportingDocumentId);
+  const fee=d.status==='Approved — Fee Required'?money(defermentFeeAmount(d),'SGD')+' / '+d.feeStatus:d.status==='Approved — Fee Waived'?'Waived':'—';
+  return '<tr><td><button class="link" onclick="openDefermentAdmin(\''+d.id+'\')"><b>'+esc(d.id)+'</b></button><br><small>'+esc(d.source)+'</small></td><td><button class="link" onclick="openStudent(\''+d.student+'\')">'+esc(nameOf(d.student))+'</button><br><small>'+esc(externalStudentNo(d.student))+'</small></td><td><b>'+esc(d.module)+'</b><br><small>'+esc(d.sourceDiet)+'</small></td><td>'+esc(d.requestedTargetDiet||'—')+'</td><td>'+esc(d.targetDiet||'Pending')+'</td><td>'+badge(d.status)+'</td><td>'+esc(fee)+'</td><td>'+(doc?'<button class="btn small alt" onclick="openDocumentViewer(\''+doc.fileId+'\')">View</button>':'—')+'</td><td><button class="btn small primary" onclick="openDefermentAdmin(\''+d.id+'\')">Review</button></td></tr>'
+ });
+ document.getElementById('defermentsTable').innerHTML=table(['Reference','Student','Module / Source diet','Requested target','Approved target','Decision','Fee','Document','Action'],rows);
+ const approved=data.defermentRequests.filter(d=>String(d.status).startsWith('Approved')).sort((a,b)=>dietSortValue(a.targetDiet)-dietSortValue(b.targetDiet)||String(a.module).localeCompare(String(b.module)));
+ document.getElementById('defermentCarryForwardTable').innerHTML=table(['Target diet','Module','Student','Source diet','Decision','Fee status'],approved.map(d=>'<tr><td><b>'+esc(d.targetDiet)+'</b></td><td>'+esc(d.module)+'</td><td>'+esc(nameOf(d.student))+'<br><small>'+esc(externalStudentNo(d.student))+'</small></td><td>'+esc(d.sourceDiet)+'</td><td>'+badge(d.status)+'</td><td>'+esc(d.feeStatus||'Not Applicable')+'</td></tr>'))
+}
+function openDefermentAdmin(id){
+ const d=defermentRequestById(id);if(!d)return;
+ const doc=data.documents.find(x=>x.id===d.supportingDocumentId),future=futureDefermentDiets(d.sourceDiet);
+ let html='<button class="close" onclick="closeDrawer()">✕</button><h2>'+esc(d.id)+' — Deferment</h2>';
+ html+='<div class="reviewgrid"><div class="reviewcard"><span>Student</span><b>'+esc(nameOf(d.student))+'</b></div><div class="reviewcard"><span>Source sitting</span><b>'+esc(d.sourceDiet)+' • '+esc(d.module)+'</b></div><div class="reviewcard"><span>Status</span><b>'+esc(d.status)+'</b></div><div class="reviewcard"><span>Requested target</span><b>'+esc(d.requestedTargetDiet||'—')+'</b></div></div>';
+ html+='<div class="master-section"><h3>Request / override information</h3><div class="kv"><span>Source</span><b>'+esc(d.source)+'</b></div><div class="kv"><span>Reason</span><b>'+esc(d.reason||'—')+'</b></div><div class="kv"><span>Supporting document</span><b>'+(doc?esc(doc.fileName)+' <button class="btn small alt" onclick="openDocumentViewer(\''+doc.fileId+'\')">View</button>':d.source==='Admin Override'?'Not applicable — admin override':'Missing')+'</b></div></div>';
+ if(d.status==='Submitted'){
+  html+='<div class="master-section"><h3>Admin decision</h3><div class="formgrid"><div class="field"><label>Decision *</label><select id="defDecision"><option>Approved — Fee Waived</option><option>Approved — Fee Required</option><option>Not Approved</option></select></div><div class="field"><label>Confirmed target exam diet</label><select id="defTarget"><option value="">Select target diet</option>'+future.map(i=>'<option '+(i.label===d.requestedTargetDiet?'selected':'')+'>'+esc(i.label)+'</option>').join('')+'</select></div><div class="field"><label>Decided by *</label><input id="defDecidedBy" placeholder="Staff name / initials"></div><div class="field full"><label>Decision reason *</label><textarea id="defDecisionReason" placeholder="State the basis for the decision"></textarea></div></div><div class="auth-actions"><button class="btn primary" onclick="saveDefermentDecision(\''+d.id+'\')">Save Decision</button></div></div>'
+ }else{
+  const fee=d.status==='Approved — Fee Required'?money(defermentFeeAmount(d),'SGD'):d.status==='Approved — Fee Waived'?'Waived':'Not applicable';
+  html+='<div class="master-section"><h3>Decision</h3><div class="master-grid">'+masterFieldHtml('Decision',d.status)+masterFieldHtml('Target diet',d.targetDiet)+masterFieldHtml('Decision by',d.decidedBy)+masterFieldHtml('Decision date',d.decidedAt)+masterFieldHtml('Fee',fee)+masterFieldHtml('Fee status',d.feeStatus)+masterFieldHtml('Decision reason',d.decisionReason)+'</div>'+(d.status==='Approved — Fee Required'&&d.feeStatus!=='Paid'?'<button class="btn primary" style="margin-top:12px" onclick="markDefermentFeePaid(\''+d.id+'\')">Mark Deferment Fee Paid</button>':'')+'</div>'
+ }
+ html+='<div class="auth-actions"><button class="btn alt" onclick="closeDrawer()">Close</button></div>';
+ const drawer=document.getElementById('drawer');drawer.classList.add('wide');drawer.innerHTML=html;document.getElementById('drawerbg').classList.add('open')
+}
+function saveDefermentDecision(id){
+ const d=defermentRequestById(id),decision=document.getElementById('defDecision')?.value||'',target=document.getElementById('defTarget')?.value||'',by=document.getElementById('defDecidedBy')?.value.trim()||'',reason=document.getElementById('defDecisionReason')?.value.trim()||'';
+ if(!d||!decision||!by||!reason)return alert('Decision, decided by and decision reason are required.');
+ if(String(decision).startsWith('Approved')&&!target)return alert('A target exam diet is required for an approved deferment.');
+ d.status=decision;d.targetDiet=String(decision).startsWith('Approved')?target:'';d.decidedBy=by;d.decidedAt=stamp();d.decisionReason=reason;
+ d.feeAmount=decision==='Approved — Fee Required'?defermentFeeAmount(d):0;d.feeStatus=decision==='Approved — Fee Required'?'Payment Required':decision==='Approved — Fee Waived'?'Waived':'Not Applicable';
+ if(String(decision).startsWith('Approved'))applyApprovedDeferment(d);
+ const doc=data.documents.find(x=>x.id===d.supportingDocumentId);if(doc)doc.reviewStatus=decision==='Not Approved'?'Reviewed':'Accepted';
+ logAction('Deferment Decision',d.id+' '+decision+' by '+by+(d.targetDiet?' → '+d.targetDiet:''));
+ save();renderAll();openDefermentAdmin(id)
+}
+function markDefermentFeePaid(id){
+ const d=defermentRequestById(id);if(!d||d.status!=='Approved — Fee Required')return;
+ d.feeStatus='Paid';d.feePaidAt=stamp();logAction('Deferment Fee',id+' marked paid');save();renderAll();openDefermentAdmin(id)
+}
+function openAdminDefermentOverride(){
+ const students=data.students.filter(s=>s.status!=='Prospect'),mods=resultBatchModuleOptions(),ints=data.intakes.filter(i=>i.programmeId==='PROG-CGQP').sort((a,b)=>dietSortValue(b.label)-dietSortValue(a.label));
+ let html='<button class="close" onclick="closeDrawer()">✕</button><h2>Admin Deferment Override / Manual Update</h2><div class="reviewwarning"><b>This is not a student request.</b><br>Use this only for an authorised manual correction or admin override. A reason and target exam diet are mandatory.</div><div class="formgrid">';
+ html+='<div class="field full"><label>Student *</label><select id="defOvStudent">'+students.map(s=>'<option value="'+s.id+'">'+esc(nameOf(s.id))+' — '+esc(externalStudentNo(s.id))+'</option>').join('')+'</select></div>';
+ html+='<div class="field"><label>Module *</label><select id="defOvModule">'+mods.map(x=>'<option>'+x+'</option>').join('')+'</select></div>';
+ html+='<div class="field"><label>Source exam diet *</label><select id="defOvSource">'+ints.map(i=>'<option>'+esc(i.label)+'</option>').join('')+'</select></div>';
+ html+='<div class="field"><label>Target exam diet *</label><select id="defOvTarget">'+ints.slice().reverse().map(i=>'<option>'+esc(i.label)+'</option>').join('')+'</select></div>';
+ html+='<div class="field"><label>Fee treatment *</label><select id="defOvDecision"><option>Approved — Fee Waived</option><option>Approved — Fee Required</option></select></div>';
+ html+='<div class="field"><label>Updated by *</label><input id="defOvBy" placeholder="Admin name / initials"></div><div class="field full"><label>Mandatory reason *</label><textarea id="defOvReason" placeholder="State why the manual deferment update is required"></textarea></div></div><div class="auth-actions"><button class="btn primary" onclick="saveAdminDefermentOverride()">Record Admin Deferment</button><button class="btn alt" onclick="closeDrawer()">Cancel</button></div>';
+ const drawer=document.getElementById('drawer');drawer.classList.add('wide');drawer.innerHTML=html;document.getElementById('drawerbg').classList.add('open')
+}
+function saveAdminDefermentOverride(){
+ const sid=document.getElementById('defOvStudent')?.value,module=document.getElementById('defOvModule')?.value,sourceDiet=document.getElementById('defOvSource')?.value,target=document.getElementById('defOvTarget')?.value,decision=document.getElementById('defOvDecision')?.value,by=document.getElementById('defOvBy')?.value.trim()||'',reason=document.getElementById('defOvReason')?.value.trim()||'';
+ if(!sid||!module||!sourceDiet||!target||!by||!reason)return alert('Student, module, source diet, target diet, updated by and reason are required.');
+ if(dietSortValue(target)<=dietSortValue(sourceDiet))return alert('Target exam diet must be after the source exam diet.');
+ const id='DEF-'+String(data.defermentRequests.length+1).padStart(4,'0'),d={id,student:sid,source:'Admin Override',module,sourceDiet,sourceIntakeId:data.intakes.find(i=>i.label===sourceDiet)?.id||'',requestedTargetDiet:'',targetDiet:target,reason,supportingDocumentId:'',status:decision,submittedAt:stamp(),submittedBy:'Admin override',decisionReason:reason,decidedBy:by,decidedAt:stamp(),feeAmount:decision==='Approved — Fee Required'?defermentFeeAmount({student:sid}):0,feeStatus:decision==='Approved — Fee Required'?'Payment Required':'Waived'};
+ data.defermentRequests.push(d);applyApprovedDeferment(d);logAction('Deferment Override',id+' recorded by '+by+' for '+nameOf(sid)+' '+module+' '+sourceDiet+' → '+target);save();renderAll();openDefermentAdmin(id)
+}
+function defermentReportRows(){return data.defermentRequests.slice().sort((a,b)=>String(b.submittedAt||b.id).localeCompare(String(a.submittedAt||a.id)))}
+function renderDefermentReports(){
+ const box=document.getElementById('defermentReportTable'),next=document.getElementById('nextDietDefermentReportTable');if(!box||!next)return;
+ const list=defermentReportRows();
+ box.innerHTML=table(['Reference','Student','Module','Source diet','Requested target','Decision','Approved target','Fee','Reason'],list.map(d=>{
+  const fee=d.status==='Approved — Fee Required'?money(defermentFeeAmount(d),'SGD')+' / '+d.feeStatus:d.status==='Approved — Fee Waived'?'Waived':'—';
+  return '<tr><td>'+esc(d.id)+'<br><small>'+esc(d.source)+'</small></td><td>'+esc(nameOf(d.student))+'<br><small>'+esc(externalStudentNo(d.student))+'</small></td><td>'+esc(d.module)+'</td><td>'+esc(d.sourceDiet)+'</td><td>'+esc(d.requestedTargetDiet||'—')+'</td><td>'+badge(d.status)+'</td><td>'+esc(d.targetDiet||'—')+'</td><td>'+esc(fee)+'</td><td>'+esc(d.decisionReason||d.reason||'')+'</td></tr>'
+ }));
+ const approved=list.filter(d=>String(d.status).startsWith('Approved')).sort((a,b)=>dietSortValue(a.targetDiet)-dietSortValue(b.targetDiet));
+ next.innerHTML=table(['Next exam diet','Module','Student','Student No','From diet','Fee treatment'],approved.map(d=>'<tr><td><b>'+esc(d.targetDiet)+'</b></td><td>'+esc(d.module)+'</td><td>'+esc(nameOf(d.student))+'</td><td>'+esc(externalStudentNo(d.student))+'</td><td>'+esc(d.sourceDiet)+'</td><td>'+esc(d.status==='Approved — Fee Required'?'Pay deferment fee — '+d.feeStatus:'Fee waived')+'</td></tr>'))
+}
+function downloadDefermentReport(){
+ const list=defermentReportRows(),headers=['Reference','Source','Student ID','Student No','Student Name','Module','Source Diet','Requested Target Diet','Decision','Approved Target Diet','Fee Amount','Fee Status','Request Reason','Decision Reason','Submitted At','Decided At'];
+ const rows=list.map(d=>[d.id,d.source,d.student,externalStudentNo(d.student),nameOf(d.student),d.module,d.sourceDiet,d.requestedTargetDiet||'',d.status,d.targetDiet||'',d.feeAmount||0,d.feeStatus||'',d.reason||'',d.decisionReason||'',d.submittedAt||'',d.decidedAt||'']);
+ const csv=[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='deferment-report-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500)
+}
 function resultBatchById(id){return data.resultBatches.find(x=>x.id===id)}
 function resultRowsForBatch(id){return data.resultBatchRows.filter(x=>x.batchId===id)}
 function resultBatchModuleOptions(programmeId='PROG-CGQP'){return programmeComponents(programmeId).filter(c=>c.assessmentMethod!=='attendance').map(c=>c.code)}
