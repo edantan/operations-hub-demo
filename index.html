@@ -120,7 +120,7 @@
 </nav>
 </aside>
 <main class="main">
-<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search demo student by name, ID or student no."><button class="btn small alt" onclick="showPortal()">Public portal</button><span class="tag">COUNCIL DEMO • 28 STUDENTS</span></header>
+<header class="top"><button class="menu" id="menu">☰</button><input id="globalSearch" placeholder="Search demo student by name, ID or student no."><button class="btn small alt" id="staffIdentityBtn" onclick="openStaffIdentity()">Staff: Council Demo Admin</button><button class="btn small alt" onclick="showPortal()">Public portal</button><span class="tag">COUNCIL DEMO • 28 STUDENTS</span></header>
 <div class="content">
 <section class="page active" id="dashboard">
 <div class="head"><div><h1>Operations Dashboard</h1><p>Council presentation dataset based on the 28 DEMO.xlsx master-data records, with linked operational workflows.</p></div><button class="btn alt" onclick="resetDemo()">Reset Council Demo</button></div>
@@ -191,6 +191,9 @@
 <section class="page" id="studentlinks">
 <div class="head"><div><h1>Existing Student Account Linking</h1><p>Review portal accounts that could not be matched automatically to an existing student record.</p></div></div>
 <div id="studentLinksTable"></div>
+<div class="head" style="margin-top:28px"><div><h2>Portal Account Support</h2><p>Staff may open a user's portal in audited support mode or issue a password-reset request. Passwords are never visible to staff and cannot be set by staff.</p></div></div>
+<div class="notice"><b>Password control:</b> staff can only initiate a reset. The user must personally set the new password. Support access is identified as staff access and recorded in the audit trail.</div>
+<div id="portalAccountsAdminTable"></div>
 </section>
 
 <section class="page" id="registrations">
@@ -323,7 +326,10 @@
 </section>
 
 <section class="page" id="audit">
-<div class="head"><div><h1>Audit Log</h1><p>Every demo action is recorded here so changes can be traced.</p></div></div>
+<div class="head"><div><h1>Audit Log</h1><p>Trace who requested, changed, amended, approved or released each record.</p></div></div>
+<div class="notice">Audit entries record the actor, role, action, affected record, reason, approver and before/after values where available. Password values and password hashes are never written to the audit trail.</div>
+<div class="kpis" id="auditKpis"></div>
+<div class="filters"><input id="auditSearch" placeholder="Search actor, record or action" oninput="renderAudit()"><select id="auditRoleFilter" onchange="renderAudit()"><option value="">All roles</option><option>Portal User</option><option>Admin</option><option>Super Admin</option><option>System</option></select></div>
 <div id="auditTable"></div>
 </section>
 
@@ -411,7 +417,7 @@ audit:[
 {time:'Demo start',action:'System',detail:'Fake dataset loaded'}],
 activity:[['Exam','DEMO-003 payment requires action'],['Case','STAX follow-up opened for DEMO-004'],['Task','Inactive student review is overdue']]
 };
-const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V9';
+const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V10';
 try{
  if(localStorage.getItem('operationsHubCouncilBuild')!==COUNCIL_DEMO_BUILD){
    localStorage.removeItem('operationsHubDemoV2');
@@ -688,7 +694,16 @@ data.exemptionHistory=data.exemptionHistory||[
  {qualification:'Demo Diploma in Governance Practice',modules:['CLAW','CCA']}
 ];
 data.students.forEach(s=>{if(!s.programmeId&&s.status!=='Prospect')s.programmeId='PROG-CGQP';if(!s.programmeVersionId&&s.status!=='Prospect')s.programmeVersionId='CGQP-2026'});
-const save=()=>localStorage.setItem('operationsHubDemoV2',JSON.stringify(data));
+let lastSavedDataForAudit='';
+function auditStateSnapshot(){try{return JSON.stringify(Object.fromEntries(Object.entries(data).filter(([k])=>!['audit','activity'].includes(k))))}catch(e){return ''}}
+lastSavedDataForAudit=auditStateSnapshot();
+const save=()=>{
+ const now=auditStateSnapshot();
+ if(lastSavedDataForAudit&&now!==lastSavedDataForAudit&&auditSequence===lastSavedAuditSequence){
+   const who=auditActor();data.audit.unshift({id:'AUD-AUTO-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),time:stamp(),actor:who.actor,role:who.role,source:who.source,action:'Automatic Change Capture',targetType:'Data Store',targetId:'',detail:'A data change was saved without a specific workflow audit event. Review the surrounding audit entries.',reason:'',approvedBy:'',before:'',after:''});data.audit=data.audit.slice(0,500);auditSequence++
+ }
+ localStorage.setItem('operationsHubDemoV2',JSON.stringify(data));lastSavedDataForAudit=auditStateSnapshot();lastSavedAuditSequence=auditSequence
+};
 const student=id=>data.students.find(x=>x.id===id);const nameOf=id=>student(id)?.name||id;
 const passingResults=['Pass','Merit','Distinction'];
 function dietSortValue(v){const s=String(v||''),y=Number((s.match(/(20\d{2})/)||[])[1]||0),months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};let m=0;for(const [k,n] of Object.entries(months)){if(s.toLowerCase().includes(k)){m=n;break}}if(/^\d{4}-\d{2}-\d{2}$/.test(s)){const d=new Date(s+'T00:00:00');return d.getTime()}return y*100+m}
@@ -722,9 +737,27 @@ function recalculateStudentProgress(studentId){
 }
 syncModuleHistoryFromExams();data.students.forEach(s=>recalculateStudentProgress(s.id));
 const stamp=()=>new Date().toLocaleString('en-SG',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-function logAction(action,detail){data.audit.unshift({time:stamp(),action,detail});data.audit=data.audit.slice(0,80);}
+let currentSurface='portal',supportSession=null,auditSequence=0,lastSavedAuditSequence=0;
+data.staffIdentity=data.staffIdentity||{name:'Council Demo Admin',role:'Admin'};
+data.audit=(data.audit||[]).map((a,idx)=>({id:a.id||'AUD-LEGACY-'+String(idx+1).padStart(4,'0'),time:a.time||'',actor:a.actor||'System / Legacy',role:a.role||'System',source:a.source||'Legacy',action:a.action||'System',targetType:a.targetType||'',targetId:a.targetId||'',detail:a.detail||'',reason:a.reason||'',approvedBy:a.approvedBy||'',before:a.before??'',after:a.after??''}));
+function safeAuditValue(v){
+ if(v===undefined||v===null)return '';
+ if(typeof v==='string')return v.length>1200?v.slice(0,1200)+'…':v;
+ try{const clean=JSON.parse(JSON.stringify(v,(k,val)=>/password|hash|token/i.test(k)?'[REDACTED]':val));const s=JSON.stringify(clean);return s.length>1200?s.slice(0,1200)+'…':s}catch(e){return String(v)}
+}
+function auditActor(){
+ if(supportSession)return {actor:supportSession.staffName,role:supportSession.staffRole||'Admin',source:'Admin Support Mode'};
+ if(currentSurface==='portal'&&activePortalAccount)return {actor:activePortalAccount.name||activePortalAccount.email||activePortalAccount.id,role:'Portal User',source:'User Portal'};
+ return {actor:data.staffIdentity?.name||'Council Demo Admin',role:data.staffIdentity?.role||'Admin',source:'Staff Console'}
+}
+function logAction(action,detail,meta={}){
+ const who=meta.actor?{actor:meta.actor,role:meta.role||'Admin',source:meta.source||'Staff Console'}:auditActor();
+ const entry={id:'AUD-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),time:stamp(),actor:who.actor,role:who.role,source:who.source,action,detail:detail||'',targetType:meta.targetType||'',targetId:meta.targetId||'',reason:meta.reason||'',approvedBy:meta.approvedBy||'',before:safeAuditValue(meta.before),after:safeAuditValue(meta.after)};
+ data.audit.unshift(entry);data.audit=data.audit.slice(0,500);auditSequence++;return entry
+}
 let portalAccounts=[];try{portalAccounts=JSON.parse(localStorage.getItem('operationsHubPortalAccountsV2'))||[]}catch(e){portalAccounts=[]}
 let activePortalAccount=null;
+portalAccounts.forEach(a=>{a.resetRequest=a.resetRequest||null;a.lastPasswordChangedAt=a.lastPasswordChangedAt||'';a.lastLoginAt=a.lastLoginAt||'';a.createdBy=a.createdBy||'User'});
 data.applications.forEach(a=>{const pv=data.programmeVersions.find(v=>v.id===a.programmeVersionId);if(a.eligibilityStatus==='Eligible'&&['Submitted','Under Review'].includes(a.status)&&(a.reviewStage==='complete'||pv?.exemptionsAllowed===false&&['Not Available','Not Applicable'].includes(a.exemptionStatus)))a.status='Approved';if(!a.portalAccountId){const acct=portalAccounts.find(x=>x.prospectId===a.student);if(acct)a.portalAccountId=acct.id}a.sharedDocumentIds=a.sharedDocumentIds||[];if(a.transcriptUnavailable==null)a.transcriptUnavailable=a.transcriptIssued==='No';if(a.submissionOpen==null)a.submissionOpen=a.status==='Draft';a.eligibilityReviewHistory=a.eligibilityReviewHistory||[];a.adminCorrections=a.adminCorrections||[];a.attemptNumber=a.attemptNumber||1;if(a.eligibilityReviewOpen==null)a.eligibilityReviewOpen=false});
 data.documents.forEach(d=>{d.profileDocument=d.profileDocument!==false;d.usedInApplications=d.usedInApplications||[d.application].filter(Boolean)});
 const savePortal=()=>localStorage.setItem('operationsHubPortalAccountsV2',JSON.stringify(portalAccounts));
@@ -884,17 +917,17 @@ function setPortalMode(loggedIn=false,active='overview'){
  portalNavButton('finance','Payments & Receipts','renderPortalFinanceHub()',active)+
  portalNavButton('support','Messages & Help','renderPortalSupportHub()',active)+
  portalNavButton('account','My Profile','renderPortalAccount()',active)+
- '</nav><div class="portal-userfooter"><button class="btn small alt" onclick="showStaff()">Staff view</button><button class="btn small alt" onclick="portalSignOut()">Sign out</button></div>'
+ '</nav><div class="portal-userfooter"><button class="btn small alt" onclick="showStaff()">'+(supportSession?'End support session':'Staff view')+'</button>'+(supportSession?'':'<button class="btn small alt" onclick="portalSignOut()">Sign out</button>')+'</div>'
 }
 function portalNavButton(id,label,action,active,count=0){return '<button class="'+(active===id?'active':'')+'" onclick="'+action+'">'+label+(count?'<span class="navcount">'+count+'</span>':'')+'</button>'}
-function portalPage(active,title,subtitle,body,actions=''){setPortalMode(true,active);document.getElementById('portalCard').innerHTML='<div class="portal-pagehead"><div><h1>'+title+'</h1><p>'+subtitle+'</p></div>'+actions+'</div>'+certificateVerificationReminderHtml(active)+body}
-function showPortal(mode='register'){document.getElementById('staffApp').style.display='none';document.getElementById('publicPortal').style.display='grid';try{if(activePortalAccount&&activePortalAccount.verified){setPortalMode(true);renderPortalHome()}else{setPortalMode(false);renderAuth(mode)}}catch(e){console.error('Public portal render failed',e);setPortalMode(false);document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Portal recovery</h2><p>Older saved demo data is preventing this view from loading.</p></div></div><button class="btn primary" onclick="repairDemoCompatibility()">Repair demo compatibility</button>'}window.scrollTo(0,0)}
-function showStaff(){document.getElementById('publicPortal').style.display='none';document.getElementById('staffApp').style.display='grid';renderAll();window.scrollTo(0,0)}
+function portalPage(active,title,subtitle,body,actions=''){setPortalMode(true,active);const support=supportSession?'<div class="reviewwarning"><b>Admin Support Mode — Read Only</b><br>'+esc(supportSession.staffName)+' is viewing this portal to assist the user. User submissions and password changes are disabled. This access is audit logged.</div>':'';document.getElementById('portalCard').innerHTML=support+'<div class="portal-pagehead"><div><h1>'+title+'</h1><p>'+subtitle+'</p></div>'+actions+'</div>'+certificateVerificationReminderHtml(active)+body;setTimeout(applySupportReadOnly,0)}
+function showPortal(mode='register'){currentSurface='portal';document.getElementById('staffApp').style.display='none';document.getElementById('publicPortal').style.display='grid';try{if(activePortalAccount&&activePortalAccount.verified){setPortalMode(true);renderPortalHome()}else{setPortalMode(false);renderAuth(mode)}}catch(e){console.error('Public portal render failed',e);setPortalMode(false);document.getElementById('portalCard').innerHTML='<div class="auth-top"><div><h2>Portal recovery</h2><p>Older saved demo data is preventing this view from loading.</p></div></div><button class="btn primary" onclick="repairDemoCompatibility()">Repair demo compatibility</button>'}window.scrollTo(0,0)}
+function showStaff(){currentSurface='staff';if(supportSession){logAction('Support Access','Support mode ended for '+supportSession.studentId,{targetType:'Portal Support Session',targetId:supportSession.studentId,reason:supportSession.reason});supportSession=null;activePortalAccount=null;save()}document.getElementById('publicPortal').style.display='none';document.getElementById('staffApp').style.display='grid';renderAll();window.scrollTo(0,0)}
 function renderAuth(mode='register'){
  setPortalMode(false);const card=document.getElementById('portalCard');
  const demo='<div class="demo-choice"><h3>Council walkthrough</h3><p>Open a prepared journey immediately. No account creation is needed for the presentation.</p><div class="actions"><button class="btn primary" onclick="startCouncilUserDemo(\'existing\')">View as existing student</button><button class="btn alt" onclick="startCouncilUserDemo(\'new\')">View as new applicant</button></div></div>';
  if(mode==='signin'){
-  card.innerHTML='<div class="auth-top"><div><h2>Sign in</h2><p>Access your applications, registrations and student information.</p></div></div>'+demo+'<div class="auth-tabs"><button onclick="renderAuth(\'register\')">Create account</button><button class="active">Sign in</button></div><div class="auth-error" id="authError"></div><form onsubmit="signInPortal(event)"><div class="formgrid"><div class="field full"><label>Email address</label><input id="loginEmail" type="email" required placeholder="name@example.com"></div><div class="field full"><label>Password</label><input id="loginPassword" type="password" required minlength="8" placeholder="Minimum 8 characters"></div></div><div class="auth-actions" style="margin-top:16px"><button class="btn primary" type="submit">Sign in</button></div></form><div class="portal-demo-warning">Council demo — use test information only.</div>';
+  card.innerHTML='<div class="auth-top"><div><h2>Sign in</h2><p>Access your applications, registrations and student information.</p></div></div>'+demo+'<div class="auth-tabs"><button onclick="renderAuth(\'register\')">Create account</button><button class="active">Sign in</button></div><div class="auth-error" id="authError"></div><form onsubmit="signInPortal(event)"><div class="formgrid"><div class="field full"><label>Email address</label><input id="loginEmail" type="email" required placeholder="name@example.com"></div><div class="field full"><label>Password</label><input id="loginPassword" type="password" required minlength="8" placeholder="Minimum 8 characters"></div></div><div class="auth-actions" style="margin-top:16px"><button class="btn primary" type="submit">Sign in</button><button type="button" class="btn alt" onclick="renderForgotPassword()">Forgot / reset password</button></div></form><div class="portal-demo-warning">Council demo — use test information only.</div>';
   return;
  }
  card.innerHTML='<div class="auth-top"><div><h2>Create your account</h2><p>Create one account to manage your programme journey.</p></div></div>'+demo+'<div class="auth-tabs"><button class="active">Create account</button><button onclick="renderAuth(\'signin\')">Sign in</button></div><div class="auth-error" id="authError"></div><form onsubmit="registerPortal(event)"><div class="formgrid"><div class="field full"><label>Full name</label><input id="regName" required placeholder="Your full name"></div><div class="field full"><label>Email address</label><input id="regEmail" type="email" required placeholder="name@example.com"></div><div class="field full"><label>Mobile number</label><input id="regPhone" required placeholder="+65 9000 1234"></div><div class="field"><label>Password</label><input id="regPassword" type="password" minlength="8" required placeholder="Minimum 8 characters"></div><div class="field"><label>Confirm password</label><input id="regConfirm" type="password" minlength="8" required placeholder="Repeat password"></div></div><label class="checkrow"><input id="regConsent" type="checkbox" required><span>I agree to the privacy notice and consent to my information being used for my application and student administration.</span></label><div class="auth-actions"><button class="btn primary" type="submit">Create account</button></div></form><div class="portal-demo-warning">Council demo — use test information only.</div>';
@@ -1124,7 +1157,7 @@ function renderPortalStudentAccess(){
  portalPage('journey','Student Access','Linked existing-student information and registration.',body)
 }
 function renderPortalAccount(){
- const a=activePortalAccount,p=a.prospectId?personalProfile(a.prospectId,a):null;portalPage('account','Account & Personal Profile','Contact details and personal information used for future registrations. Submitted registrations keep their own historical snapshot.','<div class="portal-panel"><div class="formgrid"><div class="field full"><label>Full name</label><input id="portalAccountName" value="'+esc(a.name)+'"></div><div class="field full"><label>Email address</label><input value="'+esc(a.email)+'" disabled></div><div class="field full"><label>Mobile number</label><input id="portalAccountPhone" value="'+esc(a.phone||'')+'"></div></div><div class="auth-actions" style="margin-top:14px"><button class="btn primary" onclick="savePortalAccountDetails()">Save contact details</button></div></div>'+(p?'<div class="portal-panel" style="margin-top:16px"><h3>Personal registration profile</h3><div class="kv"><span>Full name as per ID</span><b>'+esc(p.fullName||'Not completed')+'</b></div><div class="kv"><span>NRIC / FIN</span><b>'+esc(p.idNumber||'Not completed')+'</b></div><div class="kv"><span>Residential address</span><b>'+esc(p.address||'Not completed')+'</b></div><div class="kv"><span>Nationality</span><b>'+esc(p.nationality||'Not completed')+'</b></div><div class="kv"><span>Residency / Permit</span><b>'+esc(p.residencyStatus||p.permitType||'Not completed')+'</b></div><div class="kv"><span>Employer</span><b>'+esc(p.employerName||'Not recorded')+'</b></div><p class="form-note">Personal registration details are updated during a registration draft. Historical submitted registrations retain the information submitted at that time.</p></div>':''))
+ const a=activePortalAccount,p=a.prospectId?personalProfile(a.prospectId,a):null;portalPage('account','Account & Personal Profile','Contact details and personal information used for future registrations. Submitted registrations keep their own historical snapshot.','<div class="portal-panel"><div class="formgrid"><div class="field full"><label>Full name</label><input id="portalAccountName" value="'+esc(a.name)+'"></div><div class="field full"><label>Email address</label><input value="'+esc(a.email)+'" disabled></div><div class="field full"><label>Mobile number</label><input id="portalAccountPhone" value="'+esc(a.phone||'')+'"></div></div><div class="auth-actions" style="margin-top:14px"><button class="btn primary" onclick="savePortalAccountDetails()">Save contact details</button><button class="btn alt" onclick="renderChangePassword()">Change password</button></div></div>'+(p?'<div class="portal-panel" style="margin-top:16px"><h3>Personal registration profile</h3><div class="kv"><span>Full name as per ID</span><b>'+esc(p.fullName||'Not completed')+'</b></div><div class="kv"><span>NRIC / FIN</span><b>'+esc(p.idNumber||'Not completed')+'</b></div><div class="kv"><span>Residential address</span><b>'+esc(p.address||'Not completed')+'</b></div><div class="kv"><span>Nationality</span><b>'+esc(p.nationality||'Not completed')+'</b></div><div class="kv"><span>Residency / Permit</span><b>'+esc(p.residencyStatus||p.permitType||'Not completed')+'</b></div><div class="kv"><span>Employer</span><b>'+esc(p.employerName||'Not recorded')+'</b></div><p class="form-note">Personal registration details are updated during a registration draft. Historical submitted registrations retain the information submitted at that time.</p></div>':''))
 }
 function savePortalAccountDetails(){const a=activePortalAccount;a.name=document.getElementById('portalAccountName').value.trim()||a.name;a.phone=document.getElementById('portalAccountPhone').value.trim();const s=a.prospectId?student(a.prospectId):null;if(s){s.name=a.name;s.phone=a.phone}savePortal();save();renderPortalAccount()}
 function renderPortalPathChoice(){
