@@ -196,7 +196,7 @@
 
 <section class="page" id="exams">
 <div class="head"><div><h1>Exams & Results</h1><p>Record every module attempt separately so the full result history and attempt count are retained.</p></div><button class="btn primary" onclick="openAddModuleAttempt()">+ Add result / attempt</button></div>
-<div class="notice">Each sitting is kept as a separate attempt. Exemptions are recorded separately as EX and do not increase the examination-attempt count.</div>
+<div class="notice">Each sitting is kept as a separate attempt. The backend module field combines the sitting history and any current registration. Failed / deferred attempts are compacted (for example <b>J25-Fa</b>), while a current sitting can remain as <b>Nov-26</b>. The paired result stays <b>1</b> until the module is passed, awarded Merit/Distinction, or exempted.</div>
 <div id="examsTable"></div>
 </section>
 
@@ -1233,10 +1233,15 @@ function masterAttemptSuffix(result){
  if(r==='fail')return 'F';
  if(r==='fail a')return 'Fa';
  if(r==='fail b')return 'Fb';
- if(r==='fail c')return 'Fc';
+ if(r==='fail c')return 'FC';
  if(r==='absent')return 'AB';
  if(r==='deferred')return 'DF';
  return ''
+}
+function masterAttemptCode(value){
+ const token=masterDateToken(value),m=token.match(/^(Jun|Nov)-(\d{2})$/i);
+ if(m)return (m[1].toLowerCase()==='jun'?'J':'N')+m[2];
+ return token
 }
 function masterModulePair(studentId,module){
  const s=student(studentId),hist=moduleHistoryForStudent(studentId).filter(h=>h.module===module),isStax=module==='STAX';
@@ -1247,19 +1252,29 @@ function masterModulePair(studentId,module){
  }
  if(isStax){
    const done=hist.filter(h=>String(h.result).toLowerCase()==='completed'||String(h.result).toUpperCase()==='CPD').slice(-1)[0];
-   if(done||s?.stax==='Completed'){const d=masterDateToken(done?.diet||'');return {attempt:d,result:'CPD',balance:0,state:'Completed'}}
-   if(!hist.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
-   const attempt=hist.map(h=>masterDateToken(h.diet)).filter(Boolean).join('/');
-   return {attempt,result:'1',balance:1,state:'Outstanding'}
+   const staxRegs=data.sessionRegistrations.filter(r=>r.student===studentId&&r.componentCode==='STAX'&&!['Cancelled'].includes(r.status)).map(r=>data.componentOfferings.find(o=>o.id===r.offeringId)).filter(Boolean);
+   if(done||s?.stax==='Completed'){const d=masterDateToken(done?.diet||staxRegs.slice(-1)[0]?.label||'');return {attempt:d,result:'CPD',balance:0,state:'Completed'}}
+   if(!hist.length&&!staxRegs.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
+   const dates=[...hist.map(h=>masterDateToken(h.diet)),...staxRegs.map(o=>masterDateToken(o.label))].filter(Boolean);
+   return {attempt:[...new Set(dates)].join('/'),result:'1',balance:1,state:'Outstanding'}
  }
- if(!hist.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
+ if(!hist.length){
+   const currentRegs=data.moduleRegistrations.filter(m=>m.student===studentId&&m.componentCode===module&&!['Cancelled'].includes(m.status)).map(m=>({m,r:registrationById(m.registrationId),i:windowById(m.intakeId)})).filter(x=>x.r&&!['Cancelled','Draft'].includes(x.r.status));
+   if(!currentRegs.length)return {attempt:'',result:'',balance:1,state:'Never attempted'};
+   const dates=[...new Set(currentRegs.map(x=>masterDateToken(x.i?.label||'')).filter(Boolean))];
+   return {attempt:dates.join('/'),result:'1',balance:1,state:'Outstanding'}
+ }
  const completed=hist.filter(h=>passingResults.includes(h.result)).slice(-1)[0];
  if(completed){
    return {attempt:masterDateToken(completed.diet),result:String(completed.result),balance:0,state:'Completed'}
  }
- const parts=hist.map(h=>{const d=masterDateToken(h.diet),suffix=masterAttemptSuffix(h.result);return d+(suffix?'-'+suffix:'')}).filter(Boolean);
- return {attempt:parts.join('/'),result:'1',balance:1,state:'Outstanding'}
+ const historyParts=hist.map(h=>{const d=masterAttemptCode(h.diet),suffix=masterAttemptSuffix(h.result);return d+(suffix?'-'+suffix:'')}).filter(Boolean);
+ const historyDates=new Set(hist.map(h=>masterDateToken(h.diet)));
+ const currentRegs=data.moduleRegistrations.filter(m=>m.student===studentId&&m.componentCode===module&&!['Cancelled'].includes(m.status)).map(m=>({m,r:registrationById(m.registrationId),i:windowById(m.intakeId)})).filter(x=>x.r&&!['Cancelled','Draft'].includes(x.r.status));
+ const currentParts=currentRegs.map(x=>masterDateToken(x.i?.label||'')).filter(d=>d&&!historyDates.has(d));
+ return {attempt:[...historyParts,...currentParts].join('/'),result:'1',balance:1,state:'Outstanding'}
 }
+
 function masterBackendRecord(studentId){
  const order=['CLAW','CCA','CG','BDY','IFAI','DOS','RM','STAX'],pairs={};let balance=0;
  order.forEach(m=>{pairs[m]=masterModulePair(studentId,m);balance+=pairs[m].balance});
