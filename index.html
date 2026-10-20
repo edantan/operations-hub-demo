@@ -488,10 +488,11 @@ importedMasterRows.forEach((r,idx)=>{
  Object.assign(s,{name:r.fullName,email:r.email,phone:r.mobile,status:total===0?'Completed':expired?'Inactive':'Active',track:exCount===5?'Fast-track':'Full',remaining:total,exemptions:exCount,stax:staxDone?'Completed':'Not Started',risk:expired?'High':total<=1?'Medium':'Normal',shelf:expired?'Expired':'Valid',intake:r.firstIntake,latest:r.latestIntake,certificate:total===0?'Pending':'Not Ready',programmeId:'PROG-CGQP',programmeVersionId:'CGQP-2026',masterStudentNo:r.studentNo});
  let p=data.personalProfiles.find(x=>x.student===r.internalId);
  if(!p){p={student:r.internalId};data.personalProfiles.push(p)}
- Object.assign(p,{salutation:r.title,surname:r.surname,fullName:r.fullName,otherName:r.otherName,address:r.homeAddress,address2:r.homeUnit,postalHome:r.homePostal,gender:r.gender,idNumber:r.nric,dob:r.dob,placeOfBirth:'Demo City, '+(r.countryOrigin||'Singapore'),nationality:r.countryOrigin,ethnicity:r.race,religion:r.religion,residencyStatus:r.residency,permitType:r.permitType,permitExpiry:r.permitExpiry==='Not Applicable'?'':r.permitExpiry,residesInSingapore:true,employed:'Yes',employerName:r.companyName,employerPhone:r.orgPhone,employerAddress:r.officeAddress1,officeAddress1:r.officeAddress1,officeUnit2:r.officeUnit2,postalOffice:r.officePostal,employerCountry:r.countryOrigin,designation:r.designation,yearsExperience:String(Math.max(1,Number(r.age||30)-22)),jobActivity:r.activity,jobFunction:r.jobFunction,employerType:r.orgType,education:r.education,university:r.university,qualificationReason:r.reason,age:r.age});
+ Object.assign(p,{salutation:r.title,surname:r.surname,fullName:r.fullName,otherName:r.otherName,address:r.homeAddress,address2:r.homeUnit,postalHome:r.homePostal,gender:r.gender,idNumber:r.nric,dob:r.dob,placeOfBirth:'Demo City, '+(r.countryOrigin||'Singapore'),nationality:r.countryOrigin,ethnicity:r.race,religion:r.religion,residencyStatus:r.residency,permitType:r.permitType,permitExpiry:r.permitExpiry==='Not Applicable'?'':r.permitExpiry,residesInSingapore:true,employed:'Yes',employerName:r.companyName,employerPhone:r.orgPhone,employerAddress:r.officeAddress1,officeAddress1:r.officeAddress1,officeUnit2:r.officeUnit2,postalOffice:String(r.officePostal||'').padStart(6,'0'),employerCountry:r.countryOrigin,designation:r.designation,yearsExperience:String(Math.max(1,Number(r.age||30)-22)),jobActivity:r.activity,jobFunction:r.jobFunction,employerType:r.orgType,education:r.education,university:r.university,qualificationReason:r.reason,age:r.age});
  let m=data.studentMasterMeta.find(x=>x.student===r.internalId);
  if(!m){m={student:r.internalId};data.studentMasterMeta.push(m)}
- Object.assign(m,{sourceRow:String(idx+2),serialNo:r.studentNo,shelfDue:r.shelfDue,shelfMonthsRemaining:String(r.shelfMonths??''),dataFlags:expired?'Shelf life expired in source master':'',bestExamCompletion:m.bestExamCompletion||'',bestProgrammeCompletion:m.bestProgrammeCompletion||'',expectedExamCompletion:m.expectedExamCompletion||'',expectedProgrammeCompletion:m.expectedProgrammeCompletion||'',bestDietsRequired:m.bestDietsRequired||'',expectedDietsRequired:m.expectedDietsRequired||''});
+ const outstandingExam=String(r.balanceSubjects||'').split(',').map(x=>x.trim()).filter(x=>x&&x!=='STAX').length,bestDiets=Math.ceil(outstandingExam/2),bestExam=total===0?'Completed':expired?'Review required':outstandingExam===0?'Already complete':outstandingExam<=2?'Jun 2027':outstandingExam<=4?'Nov 2027':'Jun 2028',expectedExam=total===0?'Completed':expired?'Review required':outstandingExam===0?'Already complete':outstandingExam<=1?'Jun 2027':outstandingExam<=3?'Nov 2027':'Jun 2028',bestProgramme=total===0?'Completed':expired?'Review required':staxDone?bestExam:(bestExam==='Jun 2027'?'Aug/Sep 2027':bestExam==='Nov 2027'?'Mar/Apr 2028':'Aug/Sep 2028'),expectedProgramme=total===0?'Completed':expired?'Review required':staxDone?expectedExam:(expectedExam==='Jun 2027'?'Aug/Sep 2027':expectedExam==='Nov 2027'?'Mar/Apr 2028':'Aug/Sep 2028');
+ Object.assign(m,{sourceRow:String(idx+2),serialNo:r.studentNo,shelfDue:r.shelfDue,shelfMonthsRemaining:String(r.shelfMonths??''),dataFlags:expired?'Shelf life expired in source master':'Demo record populated from uploaded master sample',bestExamCompletion:bestExam,bestProgrammeCompletion:bestProgramme,expectedExamCompletion:expectedExam,expectedProgrammeCompletion:expectedProgramme,bestDietsRequired:String(bestDiets),expectedDietsRequired:String(total===0?0:Math.max(bestDiets,bestDiets+1))});
 });
 if(data.masterImportVersion!=='DEMO-XLSX-20261020-V1'){
  data.exams=(data.exams||[]).filter(e=>!importedStudentIds.has(e.student));
@@ -1311,7 +1312,7 @@ function masterContactRecord(studentId){
   'Religion':p.religion||'',
   'Residency Status':p.residencyStatus||'',
   'Permit Type':p.permitType||'',
-  'Permit Expiry':p.permitExpiry||'',
+  'Permit Expiry':p.permitExpiry||'Not Applicable',
   'Resides in Singapore':p.residesInSingapore===false?'No':'Yes',
   'Currently Employed':p.employed||'',
   'Company Name':p.employerName||'',
@@ -1329,9 +1330,9 @@ function masterContactRecord(studentId){
   'Education':p.education||'',
   'University/College':p.university||'',
   'Company Sponsored':Object.keys(sponsor).length?'Yes':'No',
-  'Sponsor Company':sponsor.companyName||'',
-  'Sponsor Representative':sponsor.repName||'',
-  'Sponsor Email':sponsor.repEmail||''
+  'Sponsor Company':sponsor.companyName||'Not Applicable',
+  'Sponsor Representative':sponsor.repName||'Not Applicable',
+  'Sponsor Email':sponsor.repEmail||'Not Applicable'
  }
 }
 function masterSourceAcademicRecord(studentId){
@@ -1349,13 +1350,13 @@ function observedDietStats(studentId){
  return {last:entries.slice(-1)[0]?.[0]||'',observed:entries.length,median}
 }
 function actionPlanRecord(studentId){
- const s=student(studentId)||{},m=studentMasterMeta(studentId),a=masterSourceAcademicRecord(studentId),stats=observedDietStats(studentId),nov=data.moduleRegistrations.filter(x=>x.student===studentId&&String(windowById(x.intakeId)?.label||'').toLowerCase().includes('nov')&&String(windowById(x.intakeId)?.label||'').includes('2026')).map(x=>x.componentCode),inactive=s.status==='Inactive',expired=s.shelf==='Expired'||String(m.shelfDue).toLowerCase()==='expired';
+ const s=student(studentId)||{},m=studentMasterMeta(studentId),a=masterSourceAcademicRecord(studentId),stats=observedDietStats(studentId),raw=importedMasterRow(studentId),rawNov=Object.entries(raw?.modules||{}).filter(([code,v])=>String(v?.attempt||'').toLowerCase().includes('nov-26')&&String(v?.result??'')==='1').map(([code])=>code),nov=[...new Set(data.moduleRegistrations.filter(x=>x.student===studentId&&String(windowById(x.intakeId)?.label||'').toLowerCase().includes('nov')&&String(windowById(x.intakeId)?.label||'').includes('2026')).map(x=>x.componentCode).concat(rawNov))],inactive=s.status==='Inactive',expired=s.shelf==='Expired'||String(m.shelfDue).toLowerCase()==='expired';
  const fast=a['No of EX']===5,active=!inactive,remainingAfterNov=Math.max(0,Number(a['Total Balance Subjects'])-new Set(nov).size),risk=expired?'High intervention':inactive?'High intervention':s.risk==='High'?'At risk':a['Total Balance Subjects']<=1?'Monitoring required':'Normal';
  const next=expired?'Management review of expired shelf life; contact student':inactive?'Re-engage student and review next registration':nov.length?'Complete '+[...new Set(nov)].join(', ')+' in Nov 2026':a['Balance Subjects']?'Register '+a['Balance Subjects']+' for the next available diet':'No academic action required';
  return {
   'S/N (source row label)':a['s/n'],'Source row':m.sourceRow||'','1st Intake':a['1st Intake'],'Latest Intake':a['Latest intake'],'Shelf-life due':a['Shelf Life (CGQP) due in (Year)'],
   'Outstanding count':a['Total Balance Subjects'],'Outstanding modules':a['Balance Subjects'],'Exemptions':a['No of EX'],'Fast-track (5 EX)':fast?'Yes':'No','STAX status':a['STAX CPD']==='CPD'||a['STAX CPD']==='EX'?'Completed/exempt':'Outstanding',
-  'Nov 2026 registered modules':[...new Set(nov)].join(', '),'Remaining after Nov pass':remainingAfterNov,'Last observed exam diet':stats.last,'Observed diets':stats.observed,'Median modules per diet':stats.median,'Typical diet interval':'',
+  'Nov 2026 registered modules':nov.join(', ')||'None','Remaining after Nov pass':remainingAfterNov,'Last observed exam diet':stats.last||a['Latest intake']||'No dated attempt','Observed diets':stats.observed,'Median modules per diet':stats.median||'N/A','Typical diet interval':stats.observed>1?'1–2 diets':'N/A',
   'Active <36 months':active?'Yes':'No','Inactive >=36 months':inactive?'Yes':'No','Long-standing progressing':(!inactive&&!expired&&stats.observed>=4)?'Yes':'No','Expired shelf life':expired?'Yes':'No',
   'Best exam completion':m.bestExamCompletion||'','Best programme completion':m.bestProgrammeCompletion||'','Expected exam completion':m.expectedExamCompletion||'','Expected programme completion':m.expectedProgrammeCompletion||'','Best diets required':m.bestDietsRequired||'','Expected diets required':m.expectedDietsRequired||'',
   'Risk category':risk,'Next action':next,'Data flags':m.dataFlags||''
