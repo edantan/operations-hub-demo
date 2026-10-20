@@ -344,7 +344,7 @@
 
 <div class="head" style="margin-top:30px"><div><h2>Deferment Report</h2><p>Student requests, decisions, fee treatment and future exam diet.</p></div><button class="btn alt" onclick="downloadDefermentReport()">Download Deferment Report</button></div>
 <div id="defermentReportTable"></div>
-<div class="head" style="margin-top:24px"><div><h3>Next Exam Diet — Deferment Carry-forward</h3><p>Approved deferred modules grouped into the future diet planning view.</p></div></div>
+<div class="head" style="margin-top:24px"><div><h3>Next Exam Diet Planning</h3><p>Normal registrations and approved deferment carry-forwards shown together by future diet and module.</p></div></div>
 <div id="nextDietDefermentReportTable"></div>
 
 <div class="head" style="margin-top:30px"><div><h2>Registration Report</h2><p>Filter submitted registrations by programme, intake, student/entry type and payment status.</p></div><button class="btn primary" onclick="downloadRegistrationReport()">Download Registration Report</button></div>
@@ -411,7 +411,7 @@ audit:[
 {time:'Demo start',action:'System',detail:'Fake dataset loaded'}],
 activity:[['Exam','DEMO-003 payment requires action'],['Case','STAX follow-up opened for DEMO-004'],['Task','Inactive student review is overdue']]
 };
-const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V8';
+const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V9';
 try{
  if(localStorage.getItem('operationsHubCouncilBuild')!==COUNCIL_DEMO_BUILD){
    localStorage.removeItem('operationsHubDemoV2');
@@ -2254,8 +2254,12 @@ function renderDefermentReports(){
   const fee=d.status==='Approved — Fee Required'?money(defermentFeeAmount(d),'SGD')+' / '+d.feeStatus:d.status==='Approved — Fee Waived'?'Waived':'—';
   return '<tr><td>'+esc(d.id)+'<br><small>'+esc(d.source)+'</small></td><td>'+esc(nameOf(d.student))+'<br><small>'+esc(externalStudentNo(d.student))+'</small></td><td>'+esc(d.module)+'</td><td>'+esc(d.sourceDiet)+'</td><td>'+esc(d.requestedTargetDiet||'—')+'</td><td>'+badge(d.status)+'</td><td>'+esc(d.targetDiet||'—')+'</td><td>'+esc(fee)+'</td><td>'+esc(d.decisionReason||d.reason||'')+'</td></tr>'
  }));
- const approved=list.filter(d=>String(d.status).startsWith('Approved')).sort((a,b)=>dietSortValue(a.targetDiet)-dietSortValue(b.targetDiet));
- next.innerHTML=table(['Next exam diet','Module','Student','Student No','From diet','Fee treatment'],approved.map(d=>'<tr><td><b>'+esc(d.targetDiet)+'</b></td><td>'+esc(d.module)+'</td><td>'+esc(nameOf(d.student))+'</td><td>'+esc(externalStudentNo(d.student))+'</td><td>'+esc(d.sourceDiet)+'</td><td>'+esc(d.status==='Approved — Fee Required'?'Pay deferment fee — '+d.feeStatus:'Fee waived')+'</td></tr>'))
+ const approved=list.filter(d=>String(d.status).startsWith('Approved'));
+ const planning=[];
+ data.moduleRegistrations.filter(m=>!['Cancelled'].includes(m.status)).forEach(m=>{const i=windowById(m.intakeId),r=registrationById(m.registrationId);if(i&&r&&!['Draft','Cancelled'].includes(r.status))planning.push({diet:i.label,module:m.componentCode,student:m.student,source:'Registration',from:'—',detail:r.status})});
+ approved.forEach(d=>planning.push({diet:d.targetDiet,module:d.module,student:d.student,source:'Approved deferment',from:d.sourceDiet,detail:d.status==='Approved — Fee Required'?'Fee '+d.feeStatus:'Fee waived'}));
+ planning.sort((a,b)=>dietSortValue(a.diet)-dietSortValue(b.diet)||String(a.module).localeCompare(String(b.module))||String(nameOf(a.student)).localeCompare(String(nameOf(b.student))));
+ next.innerHTML=table(['Next exam diet','Module','Student','Student No','Source','From diet','Status / Fee'],planning.map(x=>'<tr><td><b>'+esc(x.diet)+'</b></td><td>'+esc(x.module)+'</td><td>'+esc(nameOf(x.student))+'</td><td>'+esc(externalStudentNo(x.student))+'</td><td>'+esc(x.source)+'</td><td>'+esc(x.from)+'</td><td>'+esc(x.detail)+'</td></tr>'))
 }
 function downloadDefermentReport(){
  const list=defermentReportRows(),headers=['Reference','Source','Student ID','Student No','Student Name','Module','Source Diet','Requested Target Diet','Decision','Approved Target Diet','Fee Amount','Fee Status','Request Reason','Decision Reason','Submitted At','Decided At'];
@@ -2326,7 +2330,7 @@ async function importResultBatchFile(id){
   rows.forEach((src,idx)=>{
    const get=(...names)=>{for(const n of names){const k=Object.keys(src).find(x=>String(x).trim().toLowerCase()===n.toLowerCase());if(k!=null)return src[k]}return ''};
    const marks=Array.from({length:b.questionCount},(_,i)=>get('Q'+(i+1),'Question '+(i+1))),computed=marks.reduce((n,x)=>n+(Number.isFinite(Number(x))?Number(x):0),0);
-   const row={id:id+'-R'+String(idx+1).padStart(3,'0'),batchId:id,rowNo:idx+2,studentKey:String(get('Student ID','Student No','Student Number')).trim(),studentName:String(get('Student Name','Name')).trim(),attendanceStatus:String(get('Status','Attendance Status')||'Present').trim(),marks,uploadedTotal:get('Total','Total Marks'),computedTotal:computed,outcome:'Pending',adminOverrideReason:'',targetDiet:'',defermentDecision:'',notes:''};
+   const row={id:id+'-R'+String(idx+1).padStart(3,'0'),batchId:id,rowNo:idx+2,studentKey:String(get('Student ID','Student No','Student Number')).trim(),studentName:String(get('Student Name','Name')).trim(),attendanceStatus:(()=>{const v=String(get('Status','Attendance Status')||'Present').trim().toLowerCase();return v==='absent'||v==='ab'?'Absent':v==='deferred'||v==='deferment'||v==='d'?'Deferred':'Present'})(),marks,uploadedTotal:get('Total','Total Marks'),computedTotal:computed,outcome:'Pending',adminOverrideReason:'',targetDiet:'',defermentDecision:'',notes:''};
    row.issues=validateResultBatchRow(b,row);row.outcome=calculateBatchOutcome(b,row);data.resultBatchRows.push(row)
   });
   b.sourceFileName=file.name;b.importedAt=stamp();logAction('Result Batch',id+' imported '+rows.length+' row(s) from '+file.name);save();renderAll();openResultBatch(id)
