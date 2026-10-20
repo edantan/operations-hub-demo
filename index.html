@@ -407,6 +407,38 @@ data.componentOfferings=data.componentOfferings||[
  {id:'OFFER-STAX-AUGSEP26',programmeId:'PROG-CGQP',programmeVersionId:'CGQP-2026',componentCode:'STAX',label:'Singapore Taxation — Aug/Sep 2026',registrationOpen:'01 Jun 2026',registrationClose:'15 Jul 2026',status:'Closed',mode:'Zoom',sessions:[]}
 ];
 data.sessionRegistrations=data.sessionRegistrations||[];
+data.liveClasses=data.liveClasses||[];
+data.attendanceRecords=data.attendanceRecords||[];
+data.assignments=data.assignments||[];
+data.assignmentSubmissions=data.assignmentSubmissions||[];
+data.gradeEntries=data.gradeEntries||[];
+data.surveys=data.surveys||[
+ {id:'SURV-001',title:'Programme Experience Feedback',programmeId:'PROG-CGQP',audience:'Registered Students',status:'Draft',question:'How would you rate your overall programme experience?',createdAt:'Demo'}
+];
+data.surveyResponses=data.surveyResponses||[];
+data.workflowRules=data.workflowRules||[
+ {id:'AUTO-001',name:'Payment verification follow-up',trigger:'Payment evidence received',action:'Create finance follow-up task',enabled:true},
+ {id:'AUTO-002',name:'Upcoming class reminder',trigger:'Class within 7 days',action:'Log student reminder communication',enabled:true},
+ {id:'AUTO-003',name:'Assignment due reminder',trigger:'Assignment due within 7 days',action:'Log reminder for unsubmitted students',enabled:true},
+ {id:'AUTO-004',name:'Outstanding document follow-up',trigger:'Open document request',action:'Create follow-up task',enabled:true},
+ {id:'AUTO-005',name:'Registration confirmation provisioning',trigger:'Registration confirmed',action:'Check materials / LMS access record',enabled:true}
+];
+data.automationLog=data.automationLog||[];
+data.communicationTemplates=data.communicationTemplates||[
+ {id:'TPL-001',name:'Document Reminder',channel:'Email',subject:'Outstanding document required',body:'Please sign in to your portal and provide the outstanding document.'},
+ {id:'TPL-002',name:'Class Reminder',channel:'Email',subject:'Upcoming class/session reminder',body:'This is a reminder for your upcoming class/session.'},
+ {id:'TPL-003',name:'Assignment Reminder',channel:'Email',subject:'Upcoming assignment deadline',body:'Please review your assignment deadline in the student portal.'}
+];
+data.campaigns=data.campaigns||[];
+data.integrations=data.integrations||[
+ {id:'INT-ZOOM',name:'Zoom',category:'Live Classroom',status:'Planned',purpose:'Create meeting links and import attendance'},
+ {id:'INT-TALENTLMS',name:'TalentLMS',category:'LMS',status:'Planned',purpose:'Provision course access and learning resources'},
+ {id:'INT-MAILCHIMP',name:'Mailchimp',category:'Communications',status:'Planned',purpose:'Bulk email campaigns and segmentation'},
+ {id:'INT-XERO',name:'Xero',category:'Finance',status:'Planned',purpose:'Invoices, receipts and payment reconciliation'},
+ {id:'INT-WHATSAPP',name:'WhatsApp',category:'Communications',status:'Optional',purpose:'Operational reminders and notifications'},
+ {id:'INT-GMEET',name:'Google Meet',category:'Live Classroom',status:'Optional',purpose:'Alternative live-session provider'},
+ {id:'INT-TEAMS',name:'Microsoft Teams',category:'Live Classroom',status:'Optional',purpose:'Alternative live-session provider'}
+];
 data.certificateVerificationAppointments=data.certificateVerificationAppointments||[];
 data.certificateVerificationSettings=data.certificateVerificationSettings||{startTime:'10:00',endTime:'17:00',slotMinutes:10,lunchBlock:'12:00-13:00',unavailableDates:[],officeLabel:'CGI Singapore Office'};
 data.certificateVerificationSettings.startTime=data.certificateVerificationSettings.startTime||'10:00';
