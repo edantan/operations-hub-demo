@@ -411,7 +411,7 @@ audit:[
 {time:'Demo start',action:'System',detail:'Fake dataset loaded'}],
 activity:[['Exam','DEMO-003 payment requires action'],['Case','STAX follow-up opened for DEMO-004'],['Task','Inactive student review is overdue']]
 };
-const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V7';
+const COUNCIL_DEMO_BUILD='COUNCIL-DEMO-2026-10-20-V8';
 try{
  if(localStorage.getItem('operationsHubCouncilBuild')!==COUNCIL_DEMO_BUILD){
    localStorage.removeItem('operationsHubDemoV2');
@@ -2295,7 +2295,11 @@ function validateResultBatchRow(batch,row){
  }else if((row.marks||[]).some(x=>String(x??'').trim()!==''))issues.push({type:'warning',text:'Marks are ignored for '+status});
  if(status==='Deferred'&&s){
   const label=windowById(batch.intakeId)?.label||batch.intakeLabel||'',approved=(data.defermentRequests||[]).some(d=>d.student===s.id&&d.module===batch.module&&String(d.sourceDiet||'')===String(label)&&String(d.status||'').startsWith('Approved'));
-  if(!approved&&!row.adminOverrideReason)issues.push({type:'error',text:'Deferred requires an approved request or admin override reason'});
+  if(!approved){
+   if(!row.adminOverrideReason)issues.push({type:'error',text:'Deferred requires an approved request or admin override reason'});
+   if(!row.targetDiet)issues.push({type:'error',text:'Admin deferred override requires a target exam diet'});
+   if(!['Approved — Fee Waived','Approved — Fee Required'].includes(row.defermentDecision||''))issues.push({type:'error',text:'Admin deferred override requires fee treatment'})
+  }
  }
  return issues
 }
@@ -2322,7 +2326,7 @@ async function importResultBatchFile(id){
   rows.forEach((src,idx)=>{
    const get=(...names)=>{for(const n of names){const k=Object.keys(src).find(x=>String(x).trim().toLowerCase()===n.toLowerCase());if(k!=null)return src[k]}return ''};
    const marks=Array.from({length:b.questionCount},(_,i)=>get('Q'+(i+1),'Question '+(i+1))),computed=marks.reduce((n,x)=>n+(Number.isFinite(Number(x))?Number(x):0),0);
-   const row={id:id+'-R'+String(idx+1).padStart(3,'0'),batchId:id,rowNo:idx+2,studentKey:String(get('Student ID','Student No','Student Number')).trim(),studentName:String(get('Student Name','Name')).trim(),attendanceStatus:String(get('Status','Attendance Status')||'Present').trim(),marks,uploadedTotal:get('Total','Total Marks'),computedTotal:computed,outcome:'Pending',adminOverrideReason:'',targetDiet:'',notes:''};
+   const row={id:id+'-R'+String(idx+1).padStart(3,'0'),batchId:id,rowNo:idx+2,studentKey:String(get('Student ID','Student No','Student Number')).trim(),studentName:String(get('Student Name','Name')).trim(),attendanceStatus:String(get('Status','Attendance Status')||'Present').trim(),marks,uploadedTotal:get('Total','Total Marks'),computedTotal:computed,outcome:'Pending',adminOverrideReason:'',targetDiet:'',defermentDecision:'',notes:''};
    row.issues=validateResultBatchRow(b,row);row.outcome=calculateBatchOutcome(b,row);data.resultBatchRows.push(row)
   });
   b.sourceFileName=file.name;b.importedAt=stamp();logAction('Result Batch',id+' imported '+rows.length+' row(s) from '+file.name);save();renderAll();openResultBatch(id)
@@ -2337,10 +2341,10 @@ function openResultBatch(id){
 function editResultBatchRow(rowId){
  const r=data.resultBatchRows.find(x=>x.id===rowId),b=r&&resultBatchById(r.batchId);if(!r||!b)return;
  const marks=(r.marks||[]).map((m,i)=>'<div class="field"><label>Q'+(i+1)+' / '+b.questionMax[i]+'</label><input class="rb-row-mark" type="number" step="0.01" min="0" max="'+b.questionMax[i]+'" value="'+esc(m)+'"></div>').join('');
- document.getElementById('drawer').innerHTML='<button class="close" onclick="openResultBatch(\''+b.id+'\')">✕</button><h2>Edit Result Row</h2><p>'+esc(externalStudentNo(r.studentId)||r.studentKey)+' • '+esc(nameOf(r.studentId)||r.studentName)+'</p><div class="formgrid"><div class="field"><label>Status</label><select id="rbRowStatus">'+['Present','Absent','Deferred'].map(x=>'<option '+(x===r.attendanceStatus?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+marks+'<div class="field"><label>Uploaded total</label><input id="rbRowTotal" type="number" step="0.01" value="'+esc(r.uploadedTotal)+'"></div><div class="field full"><label>Admin override reason</label><textarea id="rbRowOverride" placeholder="Required if marking Deferred without an approved student request">'+esc(r.adminOverrideReason||'')+'</textarea></div><div class="field"><label>Target exam diet</label><select id="rbRowTargetDiet"><option value="">Select if deferred</option>'+data.intakes.filter(i=>dietSortValue(i.label)>dietSortValue(b.intakeLabel)).map(i=>'<option '+(i.label===r.targetDiet?'selected':'')+'>'+esc(i.label)+'</option>').join('')+'</select></div><div class="field full"><label>Notes</label><textarea id="rbRowNotes">'+esc(r.notes||'')+'</textarea></div></div><div class="auth-actions"><button class="btn primary" onclick="saveResultBatchRow(\''+rowId+'\')">Save row</button><button class="btn alt" onclick="openResultBatch(\''+b.id+'\')">Cancel</button></div>'
+ document.getElementById('drawer').innerHTML='<button class="close" onclick="openResultBatch(\''+b.id+'\')">✕</button><h2>Edit Result Row</h2><p>'+esc(externalStudentNo(r.studentId)||r.studentKey)+' • '+esc(nameOf(r.studentId)||r.studentName)+'</p><div class="formgrid"><div class="field"><label>Status</label><select id="rbRowStatus">'+['Present','Absent','Deferred'].map(x=>'<option '+(x===r.attendanceStatus?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+marks+'<div class="field"><label>Uploaded total</label><input id="rbRowTotal" type="number" step="0.01" value="'+esc(r.uploadedTotal)+'"></div><div class="field full"><label>Admin override reason</label><textarea id="rbRowOverride" placeholder="Required if marking Deferred without an approved student request">'+esc(r.adminOverrideReason||'')+'</textarea></div><div class="field"><label>Target exam diet</label><select id="rbRowTargetDiet"><option value="">Select if deferred</option>'+data.intakes.filter(i=>dietSortValue(i.label)>dietSortValue(b.intakeLabel)).map(i=>'<option '+(i.label===r.targetDiet?'selected':'')+'>'+esc(i.label)+'</option>').join('')+'</select></div><div class="field"><label>Deferment fee treatment</label><select id="rbRowDefDecision"><option value="">Select if admin override</option>'+['Approved — Fee Waived','Approved — Fee Required'].map(x=>'<option '+(x===r.defermentDecision?'selected':'')+'>'+x+'</option>').join('')+'</select></div><div class="field full"><label>Notes</label><textarea id="rbRowNotes">'+esc(r.notes||'')+'</textarea></div></div><div class="auth-actions"><button class="btn primary" onclick="saveResultBatchRow(\''+rowId+'\')">Save row</button><button class="btn alt" onclick="openResultBatch(\''+b.id+'\')">Cancel</button></div>'
 }
 function saveResultBatchRow(rowId){
- const r=data.resultBatchRows.find(x=>x.id===rowId),b=r&&resultBatchById(r.batchId);if(!r||!b)return;r.attendanceStatus=document.getElementById('rbRowStatus')?.value||'Present';r.marks=[...document.querySelectorAll('.rb-row-mark')].map(x=>x.value);r.uploadedTotal=document.getElementById('rbRowTotal')?.value||'';r.computedTotal=r.marks.reduce((n,x)=>n+(Number.isFinite(Number(x))?Number(x):0),0);r.adminOverrideReason=document.getElementById('rbRowOverride')?.value.trim()||'';r.targetDiet=document.getElementById('rbRowTargetDiet')?.value||'';r.notes=document.getElementById('rbRowNotes')?.value.trim()||'';r.issues=validateResultBatchRow(b,r);r.outcome=calculateBatchOutcome(b,r);save();openResultBatch(b.id)
+ const r=data.resultBatchRows.find(x=>x.id===rowId),b=r&&resultBatchById(r.batchId);if(!r||!b)return;r.attendanceStatus=document.getElementById('rbRowStatus')?.value||'Present';r.marks=[...document.querySelectorAll('.rb-row-mark')].map(x=>x.value);r.uploadedTotal=document.getElementById('rbRowTotal')?.value||'';r.computedTotal=r.marks.reduce((n,x)=>n+(Number.isFinite(Number(x))?Number(x):0),0);r.adminOverrideReason=document.getElementById('rbRowOverride')?.value.trim()||'';r.targetDiet=document.getElementById('rbRowTargetDiet')?.value||'';r.defermentDecision=document.getElementById('rbRowDefDecision')?.value||'';r.notes=document.getElementById('rbRowNotes')?.value.trim()||'';r.issues=validateResultBatchRow(b,r);r.outcome=calculateBatchOutcome(b,r);save();openResultBatch(b.id)
 }
 function submitResultBatch(id){
  const b=resultBatchById(id),rows=resultRowsForBatch(id);if(!b||b.status!=='Draft')return;rows.forEach(r=>{r.issues=validateResultBatchRow(b,r);r.outcome=calculateBatchOutcome(b,r)});if(rows.some(r=>(r.issues||[]).some(x=>x.type==='error')))return alert('Resolve all validation errors before submitting the batch.');
@@ -2356,7 +2360,15 @@ function appendMasterAttemptForOutcome(studentId,module,diet,outcome){
  const code=masterAttemptCode(diet),suffix=outcome==='Absent'?'AB':outcome==='Deferred'?'DF':'F',part=code+(suffix?'-'+suffix:'');cur.attempt=[cur.attempt,part].filter(Boolean).join('/');cur.result=1
 }
 function releaseResultRow(batch,row){
- const outcome=row.outcome,sid=row.studentId,diet=batch.intakeLabel;let h=data.moduleHistory.find(x=>x.student===sid&&x.module===batch.module&&String(x.diet)===String(diet)&&x.sourceId?.startsWith('RESULTBATCH-'));
+ const outcome=row.outcome,sid=row.studentId,diet=batch.intakeLabel;
+ if(outcome==='Deferred'){
+  const approved=data.defermentRequests.find(d=>d.student===sid&&d.module===batch.module&&String(d.sourceDiet)===String(diet)&&String(d.status||'').startsWith('Approved'));
+  if(!approved&&row.adminOverrideReason&&row.targetDiet&&row.defermentDecision){
+   const id='DEF-'+String(data.defermentRequests.length+1).padStart(4,'0'),d={id,student:sid,source:'Admin Override',module:batch.module,sourceDiet:diet,sourceIntakeId:batch.intakeId,requestedTargetDiet:'',targetDiet:row.targetDiet,reason:row.adminOverrideReason,supportingDocumentId:'',status:row.defermentDecision,submittedAt:stamp(),submittedBy:'Result batch '+batch.id,decisionReason:row.adminOverrideReason,decidedBy:batch.approvedBy||'Result Approver',decidedAt:stamp(),feeAmount:row.defermentDecision==='Approved — Fee Required'?defermentFeeAmount({student:sid}):0,feeStatus:row.defermentDecision==='Approved — Fee Required'?'Payment Required':'Waived'};
+   data.defermentRequests.push(d)
+  }
+ }
+ let h=data.moduleHistory.find(x=>x.student===sid&&x.module===batch.module&&String(x.diet)===String(diet)&&x.sourceId?.startsWith('RESULTBATCH-'));
  if(!h){h={id:'HIST-'+batch.id+'-'+sid,student:sid,module:batch.module,diet,registrationType:'Full',result:outcome,attemptNo:moduleAttemptCount(sid,batch.module)+1,sourceId:'RESULTBATCH-'+batch.id,notes:'Released from '+batch.id};data.moduleHistory.push(h)}else h.result=outcome;
  let e=data.exams.find(x=>x.id==='EXAM-'+batch.id+'-'+sid);if(!e){e={id:'EXAM-'+batch.id+'-'+sid,student:sid,module:batch.module,diet,registration:'Full',payment:'Not Required',examena:'Ready',result:outcome,resultBatchId:batch.id};data.exams.push(e)}else e.result=outcome;
  let g=data.gradeEntries.find(x=>x.sourceType==='Result Batch'&&x.sourceId===row.id);if(!g){g={id:'GRD-'+String(data.gradeEntries.length+1).padStart(4,'0'),student:sid,programmeId:batch.programmeId,intakeId:batch.intakeId,componentCode:batch.module,assessmentType:'Exam',label:batch.module+' Examination',sourceType:'Result Batch',sourceId:row.id,score:['Absent','Deferred'].includes(outcome)?null:Number(row.computedTotal),maxScore:resultBatchMaxTotal(batch),weight:100,status:'Published',outcome};data.gradeEntries.push(g)}else Object.assign(g,{score:['Absent','Deferred'].includes(outcome)?null:Number(row.computedTotal),maxScore:resultBatchMaxTotal(batch),status:'Published',outcome});
