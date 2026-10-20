@@ -96,6 +96,7 @@
 <button data-page="students">Student Records</button>
 <button data-page="studentlinks">Account Linking</button>
 <button data-page="exams">Module Registration / Exams</button>
+<button data-page="deferments">Deferments</button>
 <button data-page="materials">LMS & Resource Library</button>
 <div class="sectionlabel">Academic Delivery</div>
 <button data-page="academiccalendar">Calendar & Timetable</button>
@@ -207,6 +208,16 @@
 <div id="resultBatchesTable"></div>
 <div class="head" style="margin-top:28px"><div><h2>Individual Result / Attempt Records</h2><p>Used for exceptional manual corrections, historic attempts, absences and approved deferments.</p></div></div>
 <div id="examsTable"></div>
+</section>
+
+<section class="page" id="deferments">
+<div class="head"><div><h1>Deferments</h1><p>Review student-submitted deferment requests, supporting documents, fee decisions and target exam diets.</p></div><button class="btn alt" onclick="openAdminDefermentOverride()">Admin Override / Manual Update</button></div>
+<div class="notice"><b>Submission rule:</b> a deferment request can only be submitted by the student through the portal and must include a supporting document. Admin may record a manual override, but a reason and target exam diet are mandatory and audit logged.</div>
+<div class="kpis" id="defermentKpis"></div>
+<div class="filters"><select id="defermentStatusFilter" onchange="renderDefermentsAdmin()"><option value="">All statuses</option><option>Submitted</option><option>Approved — Fee Waived</option><option>Approved — Fee Required</option><option>Not Approved</option></select><select id="defermentTargetFilter" onchange="renderDefermentsAdmin()"><option value="">All target diets</option></select></div>
+<div id="defermentsTable"></div>
+<div class="head" style="margin-top:28px"><div><h2>Target Diet Carry-forward</h2><p>Approved deferments that must be visible when planning the next examination diet.</p></div></div>
+<div id="defermentCarryForwardTable"></div>
 </section>
 
 <section class="page" id="payments">
@@ -330,6 +341,11 @@
 <div class="notice">Academic blanks are preserved because a blank module/date means the module has never been attempted. Dummy information is used only for non-academic fields that were blank in the sample workbook.</div>
 <div id="studentMasterReportTable"></div>
 </div>
+
+<div class="head" style="margin-top:30px"><div><h2>Deferment Report</h2><p>Student requests, decisions, fee treatment and future exam diet.</p></div><button class="btn alt" onclick="downloadDefermentReport()">Download Deferment Report</button></div>
+<div id="defermentReportTable"></div>
+<div class="head" style="margin-top:24px"><div><h3>Next Exam Diet — Deferment Carry-forward</h3><p>Approved deferred modules grouped into the future diet planning view.</p></div></div>
+<div id="nextDietDefermentReportTable"></div>
 
 <div class="head" style="margin-top:30px"><div><h2>Registration Report</h2><p>Filter submitted registrations by programme, intake, student/entry type and payment status.</p></div><button class="btn primary" onclick="downloadRegistrationReport()">Download Registration Report</button></div>
 <div class="filters">
@@ -459,6 +475,9 @@ data.assignmentSubmissions=data.assignmentSubmissions||[];
 data.gradeEntries=data.gradeEntries||[];
 data.resultBatches=data.resultBatches||[];
 data.resultBatchRows=data.resultBatchRows||[];
+data.defermentRequests=data.defermentRequests||[];
+data.defermentRequests.forEach(d=>{d.status=d.status||'Submitted';d.source=d.source||'Student Request';d.feeStatus=d.feeStatus||'Not Applicable';d.supportingDocumentId=d.supportingDocumentId||'';d.decisionReason=d.decisionReason||'';d.targetDiet=d.targetDiet||'';d.sourceDiet=d.sourceDiet||'';d.module=d.module||''});
+
 data.resultBatches.forEach(b=>{b.status=b.status||'Draft';b.questionMax=Array.isArray(b.questionMax)?b.questionMax:[];b.thresholds=b.thresholds||{pass:50,merit:60,distinction:70};b.preparedBy=b.preparedBy||'';b.approvedBy=b.approvedBy||'';b.releaseReason=b.releaseReason||''});
 
 data.exemptionDecisions=data.exemptionDecisions||[
